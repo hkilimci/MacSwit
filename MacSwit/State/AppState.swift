@@ -47,6 +47,10 @@ final class AppState: ObservableObject {
             Task { await syncLoginItem() }
         }
     }
+    @AppStorage(SettingsKey.appEnabled) var appEnabled: Bool = true {
+        didSet { handleAppEnabledChange() }
+    }
+    @AppStorage(SettingsKey.switchOffOnShutdown) var switchOffOnShutdown: Bool = false
 
     // Provider selection
     @AppStorage(ProviderSettingsKeys.selectedProvider) var selectedProviderRaw: String = ProviderType.tuya.rawValue {
@@ -63,6 +67,7 @@ final class AppState: ObservableObject {
     private var timer: Timer?
     private var lastActionRecord: ActionRecord?
     private var suppressLoginItemSync = false
+    private var shutdownObserver: Any?
 
     // Current provider instance
     private var currentProvider: (any SmartPlugProvider)?
@@ -75,13 +80,19 @@ final class AppState: ObservableObject {
     init() {
         _ = validateThresholds()
         setupProvider()
-        restartTimer()
+        if appEnabled {
+            restartTimer()
+        }
         Task { await syncLoginItem() }
         performCheck(reason: .startup)
+        setupShutdownObserver()
     }
 
     deinit {
         timer?.invalidate()
+        if let observer = shutdownObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(observer)
+        }
     }
 
     func setupProvider() {
@@ -90,6 +101,10 @@ final class AppState: ObservableObject {
     }
 
     func performCheck(reason: CheckReason = .automatic) {
+        guard appEnabled else {
+            statusMessage = "App disabled"
+            return
+        }
         guard !isChecking else { return }
         isChecking = true
         statusMessage = "Checking battery…"
@@ -240,5 +255,43 @@ private extension AppState {
             suppressLoginItemSync = false
         }
         statusMessage = "Login item error: \(explanatoryMessage)"
+    }
+
+    func handleAppEnabledChange() {
+        if appEnabled {
+            restartTimer()
+            statusMessage = "App enabled"
+            performCheck(reason: .manual)
+        } else {
+            timer?.invalidate()
+            timer = nil
+            statusMessage = "App disabled"
+        }
+    }
+
+    func setupShutdownObserver() {
+        shutdownObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.willPowerOffNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self = self else { return }
+            Task { @MainActor in
+                await self.handleShutdown()
+            }
+        }
+    }
+
+    func handleShutdown() async {
+        guard switchOffOnShutdown else { return }
+        guard let provider = currentProvider, provider.isConfigured else { return }
+
+        do {
+            try await provider.sendCommand(value: false)
+            isPlugOn = false
+            lastActionMessage = "Plug OFF (shutdown)"
+        } catch {
+            // Silent failure on shutdown - nothing we can do at this point
+        }
     }
 }

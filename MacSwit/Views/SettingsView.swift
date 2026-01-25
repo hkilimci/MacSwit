@@ -7,6 +7,8 @@ struct SettingsView: View {
     @AppStorage(SettingsKey.offThreshold) private var offThreshold = Constants.defaultOffThreshold
     @AppStorage(SettingsKey.intervalSec) private var intervalSec = Constants.defaultInterval
     @AppStorage(SettingsKey.startAtLogin) private var startAtLogin = false
+    @AppStorage(SettingsKey.appEnabled) private var appEnabled = true
+    @AppStorage(SettingsKey.switchOffOnShutdown) private var switchOffOnShutdown = false
     @AppStorage(ProviderSettingsKeys.selectedProvider) private var selectedProviderRaw = ProviderType.tuya.rawValue
 
     @State private var selectedTab = 0
@@ -174,18 +176,46 @@ struct SettingsView: View {
     private var generalTab: some View {
         VStack(spacing: 20) {
             SettingsCard {
-                SettingsRow(
-                    icon: "power",
-                    iconColor: .blue,
-                    title: "Launch at login",
-                    description: appState.loginItemSupported
-                        ? "Automatically start MacSwit when you log in"
-                        : "Requires a signed .app bundle on macOS 13+"
-                ) {
-                    Toggle("", isOn: $startAtLogin)
-                        .labelsHidden()
-                        .toggleStyle(.switch)
-                        .disabled(!appState.loginItemSupported)
+                VStack(alignment: .leading, spacing: 16) {
+                    SettingsRow(
+                        icon: "bolt.circle.fill",
+                        iconColor: appEnabled ? .green : .gray,
+                        title: "Enable MacSwit",
+                        description: "Turn on/off automatic battery monitoring and plug control"
+                    ) {
+                        Toggle("", isOn: $appEnabled)
+                            .labelsHidden()
+                            .toggleStyle(.switch)
+                    }
+
+                    Divider()
+
+                    SettingsRow(
+                        icon: "power",
+                        iconColor: .blue,
+                        title: "Launch at login",
+                        description: appState.loginItemSupported
+                            ? "Automatically start MacSwit when you log in"
+                            : "Requires a signed .app bundle on macOS 13+"
+                    ) {
+                        Toggle("", isOn: $startAtLogin)
+                            .labelsHidden()
+                            .toggleStyle(.switch)
+                            .disabled(!appState.loginItemSupported)
+                    }
+
+                    Divider()
+
+                    SettingsRow(
+                        icon: "moon.zzz.fill",
+                        iconColor: .orange,
+                        title: "Switch off on shutdown",
+                        description: "Send switch OFF command when Mac is shutting down"
+                    ) {
+                        Toggle("", isOn: $switchOffOnShutdown)
+                            .labelsHidden()
+                            .toggleStyle(.switch)
+                    }
                 }
             }
 

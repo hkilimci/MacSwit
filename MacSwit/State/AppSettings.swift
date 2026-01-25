@@ -5,6 +5,8 @@ enum SettingsKey {
     static let offThreshold = "MacSwit.offThreshold"
     static let intervalSec = "MacSwit.intervalSec"
     static let startAtLogin = "MacSwit.startAtLogin"
+    static let appEnabled = "MacSwit.appEnabled"
+    static let switchOffOnShutdown = "MacSwit.switchOffOnShutdown"
 }
 
 enum Constants {
