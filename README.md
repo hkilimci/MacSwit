@@ -26,10 +26,19 @@ Menu-bar utility that watches your Mac's battery level and toggles a smart plug 
 ### Configuration
 1. Open **Settings…** from the menu-bar UI.
 2. Battery tab: set the lower/upper thresholds (plug turns **ON** at/below the lower bound and **OFF** at/above the upper bound). Keep `On < Off`; the controls enforce a 5% gap.
+
+   ![Battery Settings](assets/settings_battery.jpg)
 3. Smart Plug tab: pick the provider (currently Tuya/Tupa) and select a region endpoint or **Custom** host to match your cloud project’s data center.
 4. Fill in Access ID, Access Secret (stored securely in the login keychain when you hit **Save Secret**), Device ID, and an optional DP code (`switch_1` for most one-gang plugs). Re-saving credentials clears cached API tokens automatically.
+
+   ![Smart Plug Settings](assets/settings_smartplug.jpg)
+
+   ![Smart Plug Credentials](assets/settings_smartplug2.jpg)
+
 5. Use **Test ON/OFF** to verify the relay reacts, and **Verify Token** to ensure authentication works before enabling automation.
 6. General tab: enable **Start at login** when running from a signed `.app`. macOS will prompt for approval the first time.
+
+   ![General Settings](assets/settings_general.jpg)
 
 ### Tupa (Tuya) API Data for Settings
 Follow these steps to grab each field the Settings screen requires. The wording in the Tuya IoT Platform (a.k.a. Tupa developer console) occasionally changes, but the flow stays consistent:
