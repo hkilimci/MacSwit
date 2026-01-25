@@ -135,6 +135,15 @@ struct MenuView: View {
 
             // Action buttons
             VStack(spacing: 4) {
+                MenuToggleButton(
+                    title: appState.appEnabled ? "Enabled" : "Disabled",
+                    icon: appState.appEnabled ? "bolt.circle.fill" : "bolt.slash.circle",
+                    isOn: appState.appEnabled,
+                    color: appState.appEnabled ? .green : .gray
+                ) {
+                    appState.appEnabled.toggle()
+                }
+
                 MenuButton(
                     title: appState.isChecking ? "Checking…" : "Check Now",
                     icon: "arrow.clockwise",
@@ -142,7 +151,7 @@ struct MenuView: View {
                 ) {
                     appState.manualCheck()
                 }
-                .disabled(appState.isChecking)
+                .disabled(appState.isChecking || !appState.appEnabled)
 
                 MenuButton(title: "Settings", icon: "gearshape") {
                     NSApp.activate(ignoringOtherApps: true)
@@ -232,6 +241,42 @@ struct MenuButtonLabel: View {
         .padding(.vertical, 8)
         .background(isHovered ? Color.primary.opacity(0.1) : Color.clear)
         .clipShape(RoundedRectangle(cornerRadius: 6))
+        .onHover { hovering in
+            isHovered = hovering
+        }
+    }
+}
+
+struct MenuToggleButton: View {
+    let title: String
+    let icon: String
+    let isOn: Bool
+    let color: Color
+    let action: () -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(color)
+                    .frame(width: 16)
+                Text(title)
+                    .font(.system(size: 13, weight: .medium))
+                Spacer()
+                Circle()
+                    .fill(color)
+                    .frame(width: 8, height: 8)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(isHovered ? Color.primary.opacity(0.1) : Color.clear)
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+        }
+        .buttonStyle(.plain)
+        .focusable(false)
         .onHover { hovering in
             isHovered = hovering
         }
