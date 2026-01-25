@@ -77,6 +77,14 @@ final class AppState: ObservableObject {
         return Bundle.main.bundleURL.pathExtension == "app"
     }
 
+    var providerConfigured: Bool {
+        currentProvider?.isConfigured ?? false
+    }
+
+    var missingConfigurationFields: [String] {
+        currentProvider?.missingConfigurationFields ?? ["Provider not selected"]
+    }
+
     init() {
         _ = validateThresholds()
         setupProvider()
@@ -106,6 +114,23 @@ final class AppState: ObservableObject {
             return
         }
         guard !isChecking else { return }
+
+        // Check provider configuration first
+        guard let provider = currentProvider else {
+            statusMessage = "No provider selected"
+            return
+        }
+
+        if !provider.isConfigured {
+            let missing = provider.missingConfigurationFields
+            if missing.count == 1 {
+                statusMessage = "Missing: \(missing[0])"
+            } else {
+                statusMessage = "Missing: \(missing.joined(separator: ", "))"
+            }
+            return
+        }
+
         isChecking = true
         statusMessage = "Checking battery…"
 

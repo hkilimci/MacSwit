@@ -59,6 +59,9 @@ protocol SmartPlugProvider: AnyObject {
     /// Whether the provider has valid configuration
     var isConfigured: Bool { get }
 
+    /// Returns list of missing configuration field names, empty if fully configured
+    var missingConfigurationFields: [String] { get }
+
     /// Send on/off command to the configured device
     func sendCommand(value: Bool) async throws
 

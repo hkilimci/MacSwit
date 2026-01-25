@@ -30,9 +30,21 @@ final class TuyaProvider: SmartPlugProvider {
     private var dpCode: String = "switch_1"
 
     var isConfigured: Bool {
-        !accessId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-        !accessSecret.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-        !deviceId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        missingConfigurationFields.isEmpty
+    }
+
+    var missingConfigurationFields: [String] {
+        var missing: [String] = []
+        if accessId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            missing.append("Access ID")
+        }
+        if accessSecret.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            missing.append("Access Secret")
+        }
+        if deviceId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            missing.append("Device ID")
+        }
+        return missing
     }
 
     init() {
