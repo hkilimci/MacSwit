@@ -238,6 +238,22 @@ struct SettingsView: View {
                             .background(Color.primary.opacity(0.05))
                             .clipShape(RoundedRectangle(cornerRadius: 4))
                     }
+
+                    Divider()
+
+                    Link(destination: URL(string: "https://www.buymeacoffee.com/hhklmc")!) {
+                        SettingsRow(
+                            icon: "cup.and.saucer.fill",
+                            iconColor: .brown,
+                            title: "Buy me a coffee",
+                            description: "Support the developer"
+                        ) {
+                            Image(systemName: "arrow.up.right")
+                                .font(.system(size: 12))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .buttonStyle(.plain)
                 }
             }
 
