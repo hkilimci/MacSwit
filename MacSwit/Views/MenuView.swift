@@ -75,11 +75,15 @@ struct MenuView: View {
                     Text(appState.statusMessage)
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.primary)
+                        .lineLimit(nil)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
+                .frame(maxWidth: .infinity)
                 .background(batteryColor.opacity(0.15))
-                .clipShape(Capsule())
+                .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .padding(.top, 20)
             .padding(.bottom, 16)
