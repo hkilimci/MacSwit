@@ -1,6 +1,6 @@
 import Foundation
 
-enum TuyaClientError: LocalizedError {
+nonisolated enum TuyaClientError: LocalizedError {
     case missingConfiguration
     case invalidURL
     case invalidResponse(String)
@@ -30,18 +30,18 @@ enum TuyaClientError: LocalizedError {
 }
 
 actor TuyaClient {
-    struct Configuration: Equatable {
+    struct Configuration: Equatable, Sendable {
         var endpoint: TuyaEndpoint
         var accessId: String
         var accessSecret: String
     }
 
-    struct DeviceConfiguration: Equatable {
+    struct DeviceConfiguration: Equatable, Sendable {
         var deviceId: String
         var dpCode: String
     }
 
-    private struct CachedToken {
+    private struct CachedToken: Sendable {
         let token: String
         let expiresAt: Date
 
@@ -130,7 +130,7 @@ private extension TuyaClient {
         return CachedToken(token: result.accessToken, expiresAt: expires)
     }
 
-    func performRequest<Result: Decodable>(
+    func performRequest<Result: Decodable & Sendable>(
         path: String,
         method: String,
         body: Data?,
@@ -216,8 +216,8 @@ private extension TuyaClient {
 
 // MARK: - DTOs
 
-private struct TuyaCommandBody: Encodable {
-    struct Command: Encodable {
+private nonisolated struct TuyaCommandBody: Encodable, Sendable {
+    nonisolated struct Command: Encodable, Sendable {
         let code: String
         let value: Bool
     }
@@ -225,13 +225,13 @@ private struct TuyaCommandBody: Encodable {
     let commands: [Command]
 }
 
-private struct EmptyResult: Decodable {}
+private nonisolated struct EmptyResult: Decodable, Sendable {}
 
-private struct DeviceInfo: Decodable {
+private nonisolated struct DeviceInfo: Decodable, Sendable {
     let online: Bool
 }
 
-struct TuyaAPIResponse<Result: Decodable>: Decodable {
+nonisolated struct TuyaAPIResponse<Result: Decodable & Sendable>: Decodable, Sendable {
     let success: Bool
     let t: Int
     let result: Result?
@@ -239,7 +239,7 @@ struct TuyaAPIResponse<Result: Decodable>: Decodable {
     let msg: String?
 }
 
-private struct TokenPayload: Decodable {
+private nonisolated struct TokenPayload: Decodable, Sendable {
     let accessToken: String
     let expireTime: TimeInterval
 }

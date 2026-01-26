@@ -1,6 +1,6 @@
 import Foundation
 
-struct TuyaEndpoint: Identifiable, Equatable {
+nonisolated struct TuyaEndpoint: Identifiable, Equatable, Sendable {
     let id: String
     let name: String
     let host: String

@@ -29,9 +29,22 @@
 		8E0584B82F23778400D23B82 /* MacSwitUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MacSwitUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		8ED31D2B2F27B5F500BC3258 /* Exceptions for "MacSwit" folder in "MacSwit" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 8E0584A02F23778200D23B82 /* MacSwit */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		8E0584A32F23778200D23B82 /* MacSwit */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				8ED31D2B2F27B5F500BC3258 /* Exceptions for "MacSwit" folder in "MacSwit" target */,
+			);
 			path = MacSwit;
 			sourceTree = "<group>";
 		};
