@@ -234,11 +234,15 @@ private extension AppState {
     func restartTimer() {
         timer?.invalidate()
         let interval = max(60, TimeInterval(intervalSec))
-        timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                self?.performCheck(reason: .automatic)
-            }
-        }
+        timer = Timer.scheduledTimer(timeInterval: interval,
+                                     target: self,
+                                     selector: #selector(handleTimerFired),
+                                     userInfo: nil,
+                                     repeats: true)
+    }
+
+    @objc private func handleTimerFired() {
+        performCheck(reason: .automatic)
     }
 
     @discardableResult
