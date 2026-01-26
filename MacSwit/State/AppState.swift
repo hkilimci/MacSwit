@@ -67,7 +67,6 @@ final class AppState: ObservableObject {
     private var timer: Timer?
     private var lastActionRecord: ActionRecord?
     private var suppressLoginItemSync = false
-    private var shutdownObserver: Any?
 
     // Current provider instance
     private var currentProvider: (any SmartPlugProvider)?
@@ -93,14 +92,10 @@ final class AppState: ObservableObject {
         }
         Task { await syncLoginItem() }
         performCheck(reason: .startup)
-        setupShutdownObserver()
     }
 
     deinit {
         timer?.invalidate()
-        if let observer = shutdownObserver {
-            NSWorkspace.shared.notificationCenter.removeObserver(observer)
-        }
     }
 
     func setupProvider() {
@@ -163,6 +158,18 @@ final class AppState: ObservableObject {
             throw ProviderError.notConfigured
         }
         try await provider.testConnection()
+    }
+
+    func sendShutdownCommand() async {
+        guard switchOffOnShutdown else { return }
+        guard let provider = currentProvider, provider.isConfigured else { return }
+
+        do {
+            try await provider.sendCommand(value: false)
+            isPlugOn = false
+        } catch {
+            // Shutdown sırasında hata olursa sessizce geç
+        }
     }
 }
 
@@ -291,32 +298,6 @@ private extension AppState {
             timer?.invalidate()
             timer = nil
             statusMessage = "App disabled"
-        }
-    }
-
-    func setupShutdownObserver() {
-        shutdownObserver = NSWorkspace.shared.notificationCenter.addObserver(
-            forName: NSWorkspace.willPowerOffNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            guard let self = self else { return }
-            Task { @MainActor in
-                await self.handleShutdown()
-            }
-        }
-    }
-
-    func handleShutdown() async {
-        guard switchOffOnShutdown else { return }
-        guard let provider = currentProvider, provider.isConfigured else { return }
-
-        do {
-            try await provider.sendCommand(value: false)
-            isPlugOn = false
-            lastActionMessage = "Plug OFF (shutdown)"
-        } catch {
-            // Silent failure on shutdown - nothing we can do at this point
         }
     }
 }
