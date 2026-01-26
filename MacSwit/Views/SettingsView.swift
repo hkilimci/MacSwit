@@ -111,7 +111,7 @@ struct SettingsView: View {
                     ) {
                         Picker("", selection: $intervalSec) {
                             Text("1 min").tag(60)
-                            Text("2 min").tag(120)
+                            Text("3 min").tag(180)
                             Text("5 min").tag(300)
                             Text("10 min").tag(600)
                             Text("15 min").tag(900)

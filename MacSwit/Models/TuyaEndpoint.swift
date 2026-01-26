@@ -15,49 +15,49 @@ struct TuyaEndpoint: Identifiable, Equatable {
 
     static let china = TuyaEndpoint(
         id: "cn",
-        name: "China · Shanghai (Alibaba Cloud)",
+        name: "China",
         host: "openapi.tuyacn.com",
         isCustom: false
     )
 
     static let westernAmerica = TuyaEndpoint(
         id: "us",
-        name: "Western America · Oregon (AWS)",
+        name: "Western America",
         host: "openapi.tuyaus.com",
         isCustom: false
     )
 
     static let easternAmerica = TuyaEndpoint(
         id: "usEast",
-        name: "Eastern America · Virginia (Azure)",
+        name: "Eastern America",
         host: "openapi-ueaz.tuyaus.com",
         isCustom: false
     )
 
     static let centralEurope = TuyaEndpoint(
         id: "eu",
-        name: "Central Europe · Frankfurt (AWS)",
+        name: "Central Europe",
         host: "openapi.tuyaeu.com",
         isCustom: false
     )
 
     static let westernEurope = TuyaEndpoint(
         id: "euWest",
-        name: "Western Europe · Amsterdam (Azure)",
+        name: "Western Europe",
         host: "openapi-weaz.tuyaeu.com",
         isCustom: false
     )
 
     static let india = TuyaEndpoint(
         id: "in",
-        name: "India · Mumbai (AWS)",
+        name: "India",
         host: "openapi.tuyain.com",
         isCustom: false
     )
 
     static let singapore = TuyaEndpoint(
         id: "sg",
-        name: "Singapore · Singapore (Alibaba Cloud)",
+        name: "Singapore",
         host: "openapi-sg.iotbing.com",
         isCustom: false
     )

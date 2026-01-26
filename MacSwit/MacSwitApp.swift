@@ -8,15 +8,16 @@
 import SwiftUI
 
 @main
-@NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 struct MacSwitApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var appState: AppState
 
     init() {
         // Run migrations before initializing state
         SettingsMigration.runMigrations()
-        _appState = StateObject(wrappedValue: AppState())
-        appDelegate.appState = _appState.wrappedValue
+        let initialState = AppState()
+        _appState = StateObject(wrappedValue: initialState)
+        appDelegate.appState = initialState
     }
 
     private var plugIcon: String {
