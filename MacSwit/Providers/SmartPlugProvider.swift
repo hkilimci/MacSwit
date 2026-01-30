@@ -1,12 +1,23 @@
 import Foundation
 
-/// Identifies available smart plug providers
+// =============================================================================
+// MARK: - Provider Type
+// =============================================================================
+
+/// Identifies available smart plug providers.
+///
+/// **To add a new provider:**
+/// 1. Add a case here (e.g. `case meross = "meross"`)
+/// 2. Update `displayName` and `iconName`
+/// 3. Create `Providers/<Brand>/<Brand>PlugController.swift` implementing `PlugProviding`
+/// 4. Create `Providers/<Brand>/<Brand>PlugFieldsView.swift` with the settings form
+/// 5. Add the case to `PlugProviderFactory.make(config:accessSecret:)`
+/// 6. Add the case to `PlugEditView.providerFieldsView`
+/// 7. Add provider-specific fields to `PlugConfig` in a new MARK section
 enum ProviderType: String, CaseIterable, Identifiable, Codable {
     case tuya = "tuya"
-    // Future providers:
     // case meross = "meross"
     // case kasa = "kasa"
-    // case shelly = "shelly"
 
     var id: String { rawValue }
 
@@ -22,6 +33,10 @@ enum ProviderType: String, CaseIterable, Identifiable, Codable {
         }
     }
 }
+
+// =============================================================================
+// MARK: - Provider Errors
+// =============================================================================
 
 /// Errors that any provider can throw
 enum ProviderError: LocalizedError {
@@ -47,30 +62,44 @@ enum ProviderError: LocalizedError {
     }
 }
 
-/// Protocol that all smart plug providers must implement
+// =============================================================================
+// MARK: - Provider Protocol
+// =============================================================================
+
+/// Protocol that every provider-specific controller must implement.
+///
+/// Each provider brand (Tuya, Meross, Kasa, etc.) has its own class conforming
+/// to this protocol. See `TuyaPlugController` for the reference implementation.
 @MainActor
-protocol SmartPlugProvider: AnyObject {
-    /// Unique identifier for this provider type
-    var providerType: ProviderType { get }
-
-    /// Human-readable name for display
-    var displayName: String { get }
-
-    /// Whether the provider has valid configuration
+protocol PlugProviding {
+    /// Whether the provider has all required configuration filled in
     var isConfigured: Bool { get }
 
-    /// Returns list of missing configuration field names, empty if fully configured
-    var missingConfigurationFields: [String] { get }
+    /// Names of missing configuration fields (empty when fully configured)
+    var missingFields: [String] { get }
 
-    /// Send on/off command to the configured device
+    /// Send an on/off command to the configured device
     func sendCommand(value: Bool) async throws
 
-    /// Test the connection/authentication without sending commands
+    /// Test the connection/authentication without sending a command
     func testConnection() async throws
+}
 
-    /// Load configuration from storage (UserDefaults + Keychain)
-    func loadConfiguration()
+// =============================================================================
+// MARK: - Provider Factory
+// =============================================================================
 
-    /// Clear cached tokens/state (e.g., when credentials change)
-    func clearCache()
+/// Creates the correct provider controller for a given plug configuration.
+///
+/// **To add a new provider**, add a case to the switch below.
+enum PlugProviderFactory {
+    @MainActor
+    static func make(config: PlugConfig, accessSecret: String) -> any PlugProviding {
+        switch config.providerType {
+        case .tuya:
+            return TuyaPlugController(config: config, accessSecret: accessSecret)
+        // case .meross:
+        //     return MerossPlugController(config: config, accessSecret: accessSecret)
+        }
+    }
 }

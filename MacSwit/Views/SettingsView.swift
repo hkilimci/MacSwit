@@ -9,9 +9,9 @@ struct SettingsView: View {
     @AppStorage(SettingsKey.startAtLogin) private var startAtLogin = false
     @AppStorage(SettingsKey.appEnabled) private var appEnabled = true
     @AppStorage(SettingsKey.switchOffOnShutdown) private var switchOffOnShutdown = false
-    @AppStorage(ProviderSettingsKeys.selectedProvider) private var selectedProviderRaw = ProviderType.tuya.rawValue
-
     @State private var selectedTab = 0
+    @State private var showAddPlug = false
+    @State private var editingPlug: PlugConfig?
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -131,43 +131,67 @@ struct SettingsView: View {
     // MARK: - Smart Plug Tab
 
     private var smartPlugTab: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                // Provider selection
-                SettingsCard {
-                    SettingsRow(
-                        icon: "powerplug",
-                        iconColor: .blue,
-                        title: "Provider",
-                        description: "Select your smart plug provider"
-                    ) {
-                        Picker("", selection: $selectedProviderRaw) {
-                            ForEach(ProviderRegistry.shared.availableProviders) { type in
-                                Text(type.displayName).tag(type.rawValue)
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(spacing: 12) {
+                    ForEach(appState.plugStore.plugs) { plug in
+                        PlugRow(
+                            plug: plug,
+                            isActive: appState.plugStore.activePlugId == plug.id,
+                            plugStore: appState.plugStore,
+                            onActivate: {
+                                appState.plugStore.setActive(plug.id)
+                            },
+                            onEdit: {
+                                editingPlug = plug
+                            },
+                            onDelete: {
+                                appState.plugStore.delete(plug.id)
                             }
+                        )
+                    }
+
+                    if appState.plugStore.plugs.isEmpty {
+                        VStack(spacing: 8) {
+                            Image(systemName: "powerplug")
+                                .font(.system(size: 28))
+                                .foregroundColor(.secondary)
+                            Text("No plugs configured")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(.secondary)
+                            Text("Add a smart plug to get started")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
                         }
-                        .labelsHidden()
-                        .frame(width: 140)
-                        .onChange(of: selectedProviderRaw) { _, _ in
-                            appState.setupProvider()
-                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 32)
                     }
                 }
-
-                // Provider-specific settings
-                providerSettingsView
+                .padding(24)
             }
-            .padding(24)
+
+            Divider()
+
+            HStack {
+                Button(action: { showAddPlug = true }) {
+                    Label("Add Plug", systemImage: "plus")
+                        .font(.system(size: 12, weight: .medium))
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+
+                Spacer()
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 12)
         }
-    }
-
-    @ViewBuilder
-    private var providerSettingsView: some View {
-        switch ProviderType(rawValue: selectedProviderRaw) ?? .tuya {
-        case .tuya:
-            if let provider = ProviderRegistry.shared.provider(for: .tuya) as? TuyaProvider {
-                TuyaSettingsView(provider: provider)
-            }
+        .sheet(isPresented: $showAddPlug) {
+            PlugEditView(existingConfig: nil)
+                .environmentObject(appState)
+        }
+        .sheet(item: $editingPlug) { plug in
+            PlugEditView(existingConfig: plug)
+                .environmentObject(appState)
         }
     }
 
@@ -225,7 +249,7 @@ struct SettingsView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("MacSwit")
                                 .font(.system(size: 14, weight: .semibold))
-                            Text("Smart battery management for your Mac")
+                            Text("Smart plugged battery management for your Mac")
                                 .font(.system(size: 12))
                                 .foregroundColor(.secondary)
                         }
@@ -434,6 +458,131 @@ struct BatteryRangeView: View {
 
                 ThresholdMarker(label: "\(offThreshold)%", color: .green)
                     .offset(x: max(0, offPosition - 15))
+            }
+        }
+    }
+}
+
+struct PlugRow: View {
+    let plug: PlugConfig
+    let isActive: Bool
+    let plugStore: PlugStore
+    let onActivate: () -> Void
+    let onEdit: () -> Void
+    let onDelete: () -> Void
+
+    @State private var isSending = false
+    @State private var lastResult: SwitchResult?
+
+    private enum SwitchResult {
+        case on, off, error(String)
+    }
+
+    var body: some View {
+        SettingsCard {
+            HStack(spacing: 12) {
+                Button(action: onActivate) {
+                    Image(systemName: isActive ? "largecircle.fill.circle" : "circle")
+                        .font(.system(size: 16))
+                        .foregroundColor(isActive ? .accentColor : .secondary)
+                }
+                .buttonStyle(.plain)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(plug.name)
+                        .font(.system(size: 13, weight: .medium))
+
+                    if case .error(let msg) = lastResult {
+                        Text(msg)
+                            .font(.system(size: 10))
+                            .foregroundColor(.red)
+                            .lineLimit(1)
+                    } else {
+                        Text(plug.providerType.displayName)
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                Spacer()
+
+                HStack(spacing: 8) {
+                    // Manual ON/OFF switches
+                    switchButton(value: true)
+                    switchButton(value: false)
+
+                    Divider()
+                        .frame(height: 16)
+
+                    Button(action: onEdit) {
+                        Image(systemName: "pencil")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+
+                    Button(action: onDelete) {
+                        Image(systemName: "trash")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.red.opacity(0.7))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    private func switchButton(value: Bool) -> some View {
+        Button {
+            sendCommand(value: value)
+        } label: {
+            Group {
+                if isSending {
+                    ProgressView()
+                        .scaleEffect(0.45)
+                        .frame(width: 14, height: 14)
+                } else {
+                    Image(systemName: value ? "bolt.fill" : "bolt.slash.fill")
+                        .font(.system(size: 11, weight: .semibold))
+                }
+            }
+            .frame(width: 24, height: 24)
+            .background(buttonBackground(for: value))
+            .foregroundColor(buttonForeground(for: value))
+            .clipShape(RoundedRectangle(cornerRadius: 5))
+        }
+        .buttonStyle(.plain)
+        .disabled(isSending)
+    }
+
+    private func buttonBackground(for value: Bool) -> Color {
+        switch lastResult {
+        case .on where value:   return .green.opacity(0.25)
+        case .off where !value: return .orange.opacity(0.25)
+        default:                return Color.primary.opacity(0.06)
+        }
+    }
+
+    private func buttonForeground(for value: Bool) -> Color {
+        switch lastResult {
+        case .on where value:   return .green
+        case .off where !value: return .orange
+        default:                return .secondary
+        }
+    }
+
+    private func sendCommand(value: Bool) {
+        isSending = true
+        lastResult = nil
+        Task {
+            defer { isSending = false }
+            let secret = plugStore.readSecret(for: plug)
+            let controller = PlugProviderFactory.make(config: plug, accessSecret: secret)
+            do {
+                try await controller.sendCommand(value: value)
+                lastResult = value ? .on : .off
+            } catch {
+                lastResult = .error(error.localizedDescription)
             }
         }
     }

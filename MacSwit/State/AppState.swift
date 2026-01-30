@@ -52,24 +52,15 @@ final class AppState: ObservableObject {
     }
     @AppStorage(SettingsKey.switchOffOnShutdown) var switchOffOnShutdown: Bool = false
 
-    // Provider selection
-    @AppStorage(ProviderSettingsKeys.selectedProvider) var selectedProviderRaw: String = ProviderType.tuya.rawValue {
-        didSet { setupProvider() }
-    }
-
-    var selectedProvider: ProviderType {
-        get { ProviderType(rawValue: selectedProviderRaw) ?? .tuya }
-        set { selectedProviderRaw = newValue.rawValue }
-    }
+    let plugStore: PlugStore
 
     private let batteryReader = BatteryReader()
     private let hysteresisInterval: TimeInterval = 180
     private var timer: Timer?
     private var lastActionRecord: ActionRecord?
     private var suppressLoginItemSync = false
-
-    // Current provider instance
-    private var currentProvider: (any SmartPlugProvider)?
+    private var currentController: (any PlugProviding)?
+    private var cancellables = Set<AnyCancellable>()
 
     var loginItemSupported: Bool {
         guard #available(macOS 13.0, *) else { return false }
@@ -77,19 +68,41 @@ final class AppState: ObservableObject {
     }
 
     var providerConfigured: Bool {
-        currentProvider?.isConfigured ?? false
+        currentController?.isConfigured ?? false
     }
 
     var missingConfigurationFields: [String] {
-        currentProvider?.missingConfigurationFields ?? ["Provider not selected"]
+        currentController?.missingFields ?? ["No plug configured"]
+    }
+
+    var activePlugName: String? {
+        plugStore.activePlug?.name
     }
 
     init() {
+        plugStore = PlugStore()
+
         _ = validateThresholds()
-        setupProvider()
-        if appEnabled {
-            restartTimer()
-        }
+        setupController()
+
+        // Subscribe to active plug changes to rebuild controller
+        plugStore.$activePlugId
+            .dropFirst()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.setupController()
+            }
+            .store(in: &cancellables)
+
+        // Forward plugStore changes to trigger UI updates
+        plugStore.objectWillChange
+            .receive(on: RunLoop.main)
+            .sink { [weak self] in
+                self?.objectWillChange.send()
+            }
+            .store(in: &cancellables)
+
+        restartTimer()
         Task { await syncLoginItem() }
         performCheck(reason: .startup)
     }
@@ -98,42 +111,50 @@ final class AppState: ObservableObject {
         timer?.invalidate()
     }
 
-    func setupProvider() {
-        currentProvider = ProviderRegistry.shared.provider(for: selectedProvider)
-        currentProvider?.loadConfiguration()
+    func setupController() {
+        guard let plug = plugStore.activePlug else {
+            currentController = nil
+            return
+        }
+        let secret = plugStore.readSecret(for: plug)
+        currentController = PlugProviderFactory.make(config: plug, accessSecret: secret)
     }
 
     func performCheck(reason: CheckReason = .automatic) {
-        guard appEnabled else {
-            statusMessage = "App disabled"
-            return
-        }
         guard !isChecking else { return }
 
-        // Check provider configuration first
-        guard let provider = currentProvider else {
-            statusMessage = "No provider selected"
-            return
-        }
-
-        if !provider.isConfigured {
-            let missing = provider.missingConfigurationFields
-            if missing.count == 1 {
-                statusMessage = "Missing: \(missing[0])"
-            } else {
-                statusMessage = "Missing: \(missing.joined(separator: ", "))"
-            }
-            return
-        }
-
         isChecking = true
-        statusMessage = "Checking battery…"
+        statusMessage = appEnabled ? "Checking battery…" : "App disabled"
 
         Task {
             do {
                 let percent = try await readBatteryPercent()
                 batteryPercent = percent
                 lastCheckDate = Date()
+
+                guard appEnabled else {
+                    statusMessage = "App disabled"
+                    isChecking = false
+                    return
+                }
+
+                guard let controller = currentController else {
+                    statusMessage = "No plug configured"
+                    isChecking = false
+                    return
+                }
+
+                if !controller.isConfigured {
+                    let missing = controller.missingFields
+                    if missing.count == 1 {
+                        statusMessage = "Missing: \(missing[0])"
+                    } else {
+                        statusMessage = "Missing: \(missing.joined(separator: ", "))"
+                    }
+                    isChecking = false
+                    return
+                }
+
                 try await evaluateBattery(percent: percent, reason: reason)
             } catch {
                 statusMessage = "Error: \(error.localizedDescription)"
@@ -147,28 +168,28 @@ final class AppState: ObservableObject {
     }
 
     func testCommand(value: Bool) async throws {
-        guard let provider = currentProvider else {
+        guard let controller = currentController else {
             throw ProviderError.notConfigured
         }
-        try await provider.sendCommand(value: value)
+        try await controller.sendCommand(value: value)
     }
 
     func testToken() async throws {
-        guard let provider = currentProvider else {
+        guard let controller = currentController else {
             throw ProviderError.notConfigured
         }
-        try await provider.testConnection()
+        try await controller.testConnection()
     }
 
     func sendShutdownCommand() async {
         guard switchOffOnShutdown else { return }
-        guard let provider = currentProvider, provider.isConfigured else { return }
+        guard let controller = currentController, controller.isConfigured else { return }
 
         do {
-            try await provider.sendCommand(value: false)
+            try await controller.sendCommand(value: false)
             isPlugOn = false
         } catch {
-            // Shutdown sırasında hata olursa sessizce geç
+            // Silently ignore errors during shutdown
         }
     }
 }
@@ -208,13 +229,13 @@ private extension AppState {
             return
         }
 
-        guard let provider = currentProvider, provider.isConfigured else {
-            statusMessage = "Configure provider in Settings"
+        guard let controller = currentController, controller.isConfigured else {
+            statusMessage = "Configure plug in Settings"
             return
         }
 
         do {
-            try await provider.sendCommand(value: desiredAction.value)
+            try await controller.sendCommand(value: desiredAction.value)
             lastActionRecord = ActionRecord(action: desiredAction, date: Date())
             isPlugOn = desiredAction == .on
             lastActionMessage = "Plug \(desiredAction.displayText) at \(percent)%"
@@ -273,7 +294,6 @@ private extension AppState {
         let explanatoryMessage: String
         let nsError = error as NSError
         if nsError.domain == "SMAppServiceErrorDomain" {
-            // Error codes: 1 = notAuthorized, 2 = notFound, 3 = notRegistered, 4 = notEntitled
             switch nsError.code {
             case 1:
                 explanatoryMessage = "Allow MacSwit under System Settings › Login Items."
@@ -295,13 +315,11 @@ private extension AppState {
 
     func handleAppEnabledChange() {
         if appEnabled {
-            restartTimer()
             statusMessage = "App enabled"
             performCheck(reason: .manual)
         } else {
-            timer?.invalidate()
-            timer = nil
             statusMessage = "App disabled"
+            performCheck(reason: .manual)
         }
     }
 }

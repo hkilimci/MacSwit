@@ -38,34 +38,27 @@ struct MenuView: View {
         VStack(spacing: 0) {
             // Header with battery visualization
             VStack(spacing: 16) {
-                // Battery ring
-                ZStack {
-                    // Background ring
-                    Circle()
-                        .stroke(Color.primary.opacity(0.1), lineWidth: 8)
-                        .frame(width: 80, height: 80)
-
-                    // Progress ring
-                    Circle()
-                        .trim(from: 0, to: CGFloat(appState.batteryPercent) / 100)
-                        .stroke(
-                            batteryColor,
-                            style: StrokeStyle(lineWidth: 8, lineCap: .round)
-                        )
-                        .frame(width: 80, height: 80)
-                        .rotationEffect(.degrees(-90))
-                        .animation(.easeInOut(duration: 0.5), value: appState.batteryPercent)
-
-                    // Center content
-                    VStack(spacing: 2) {
-                        Text("\(appState.batteryPercent)")
-                            .font(.system(size: 24, weight: .bold, design: .rounded))
-                        Text("%")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(.secondary)
-                    }
+                // Battery icon
+                BatteryIcon(percent: appState.batteryPercent, color: batteryColor)
+                
+                // Threshold indicators
+                HStack(spacing: 24) {
+                    ThresholdIndicator(
+                        label: "Charge at",
+                        value: appState.onThreshold,
+                        icon: "bolt.fill",
+                        color: .red
+                    )
+                    ThresholdIndicator(
+                        label: "Stop at",
+                        value: appState.offThreshold,
+                        icon: "bolt.slash.fill",
+                        color: .green
+                    )
                 }
-
+                //.padding(.horizontal, 16)
+                //.padding(.bottom, 16)
+                
                 // Status badge
                 HStack(spacing: 6) {
                     Image(systemName: statusIcon)
@@ -83,31 +76,10 @@ struct MenuView: View {
                 .padding(.vertical, 6)
                 .frame(maxWidth: .infinity)
                 .background(batteryColor.opacity(0.15))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                //.clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .padding(.top, 20)
             .padding(.bottom, 16)
-
-            // Threshold indicators
-            HStack(spacing: 24) {
-                ThresholdIndicator(
-                    label: "Charge at",
-                    value: appState.onThreshold,
-                    icon: "bolt.fill",
-                    color: .red
-                )
-                ThresholdIndicator(
-                    label: "Stop at",
-                    value: appState.offThreshold,
-                    icon: "bolt.slash.fill",
-                    color: .green
-                )
-            }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 16)
-
-            Divider()
-                .padding(.horizontal, 16)
 
             // Last action info
             VStack(spacing: 4) {
@@ -136,9 +108,41 @@ struct MenuView: View {
 
             Divider()
                 .padding(.horizontal, 16)
+                .padding(.bottom,6)
 
             // Action buttons
             VStack(spacing: 4) {
+                
+                if appState.plugStore.plugs.count > 1 {
+                    HStack(spacing: 12) {
+                        Image(systemName: "powerplug")
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary)
+                        Picker("", selection: Binding(
+                            get: { appState.plugStore.activePlugId },
+                            set: { id in
+                                if let id { appState.plugStore.setActive(id) }
+                            }
+                        )) {
+                            ForEach(appState.plugStore.plugs) { plug in
+                                Text(plug.name).tag(Optional(plug.id))
+                            }
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.menu)
+                        .fixedSize()
+                    }
+                } else if let plugName = appState.activePlugName {
+                    HStack(spacing: 12) {
+                        Image(systemName: "powerplug")
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary)
+                        Text(plugName)
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
                 MenuToggleButton(
                     title: appState.appEnabled ? "Enabled" : "Disabled",
                     icon: appState.appEnabled ? "bolt.circle.fill" : "bolt.slash.circle",
@@ -181,6 +185,51 @@ struct MenuView: View {
 }
 
 // MARK: - Supporting Views
+
+struct BatteryIcon: View {
+    let percent: Int
+    let color: Color
+
+    private let bodyWidth: CGFloat = 100
+    private let bodyHeight: CGFloat = 44
+    private let cornerRadius: CGFloat = 8
+    private let borderWidth: CGFloat = 2.5
+    private let capWidth: CGFloat = 6
+    private let capHeight: CGFloat = 18
+    private let capRadius: CGFloat = 3
+    private let inset: CGFloat = 3.5
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ZStack(alignment: .leading) {
+                // Body outline
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .stroke(Color.primary.opacity(0.25), lineWidth: borderWidth)
+                    .frame(width: bodyWidth, height: bodyHeight)
+
+                // Fill level
+                let fillWidth = max(0, (bodyWidth - inset * 2) * CGFloat(percent) / 100)
+                RoundedRectangle(cornerRadius: cornerRadius - inset)
+                    .fill(color)
+                    .frame(width: fillWidth, height: bodyHeight - inset * 2)
+                    .padding(.leading, inset)
+                    .animation(.easeInOut(duration: 0.5), value: percent)
+
+                // Percentage label
+                Text("\(percent)%")
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .foregroundColor(.primary)
+                    .frame(width: bodyWidth, height: bodyHeight)
+            }
+
+            // Terminal cap
+            RoundedRectangle(cornerRadius: capRadius)
+                .fill(Color.primary.opacity(0.25))
+                .frame(width: capWidth, height: capHeight)
+                .padding(.leading, 2)
+        }
+    }
+}
 
 struct ThresholdIndicator: View {
     let label: String
