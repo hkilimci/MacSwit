@@ -1,5 +1,10 @@
 import Foundation
 
+/// Tuya Cloud API bölgesel uç noktası (endpoint) tanımı.
+///
+/// Her bölge (Çin, Avrupa, Amerika vb.) farklı bir `host` adresine sahiptir.
+/// Kullanıcı önceden tanımlı bölgelerden birini seçebilir veya özel bir
+/// endpoint girebilir.
 nonisolated struct TuyaEndpoint: Identifiable, Equatable, Sendable {
     let id: String
     let name: String

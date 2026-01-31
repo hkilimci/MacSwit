@@ -4,6 +4,12 @@ import ServiceManagement
 import AppKit
 import Combine
 
+/// Uygulamanın merkezi durum yöneticisi.
+///
+/// Pil seviyesini periyodik olarak okur, yapılandırılabilir eşik değerlerine göre
+/// akıllı prizi açıp kapatır. Zamanlayıcı tabanlı otomatik kontrol, histerezis
+/// (3 dakika içinde aynı komutu tekrar göndermeme), login-item yönetimi ve
+/// kapanışta priz kapatma gibi tüm iş mantığını barındırır.
 @MainActor
 final class AppState: ObservableObject {
     enum PlugAction: String {

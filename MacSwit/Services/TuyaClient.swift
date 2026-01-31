@@ -1,5 +1,6 @@
 import Foundation
 
+/// Tuya API iletişiminde oluşabilecek hata türleri.
 nonisolated enum TuyaClientError: LocalizedError {
     case missingConfiguration
     case invalidURL
@@ -29,6 +30,11 @@ nonisolated enum TuyaClientError: LocalizedError {
     }
 }
 
+/// Tuya Cloud REST API ile iletişimi yöneten actor.
+///
+/// Token alma, HMAC-SHA256 imzalama, cihaz durumu sorgulama ve açma/kapama
+/// komutları gönderme işlemlerini thread-safe biçimde gerçekleştirir.
+/// Token önbelleği sayesinde gereksiz ağ çağrılarını önler.
 actor TuyaClient {
     struct Configuration: Equatable, Sendable {
         var endpoint: TuyaEndpoint

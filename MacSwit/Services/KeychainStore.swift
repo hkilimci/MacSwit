@@ -1,6 +1,7 @@
 import Foundation
 import Security
 
+/// Keychain işlemlerinde oluşabilecek hata türleri.
 enum KeychainError: LocalizedError {
     case unexpectedStatus(OSStatus)
     case invalidData
@@ -18,6 +19,10 @@ enum KeychainError: LocalizedError {
     }
 }
 
+/// macOS Keychain API'sini sarmalayan yardımcı sınıf.
+///
+/// Tuya Access Secret gibi hassas kimlik bilgilerini güvenli biçimde saklar,
+/// okur ve siler. `shared` singleton örneği üzerinden uygulama genelinde kullanılır.
 final class KeychainStore {
     static let shared = KeychainStore()
 

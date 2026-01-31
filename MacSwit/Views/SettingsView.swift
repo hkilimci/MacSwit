@@ -1,5 +1,11 @@
 import SwiftUI
 
+/// Ana ayarlar penceresi.
+///
+/// Üç sekmeden oluşur:
+/// - **Battery**: Şarj başlama/durdurma eşikleri ve kontrol aralığı
+/// - **Smart Plug**: Priz listesi yönetimi (ekle, düzenle, sil, aktif seç)
+/// - **General**: Uygulama etkinleştirme, login-item ve kapanış davranışı
 struct SettingsView: View {
     @EnvironmentObject var appState: AppState
 
@@ -289,6 +295,7 @@ struct SettingsView: View {
 
 // MARK: - Supporting Views
 
+/// Ayarlar sekmelerinde kullanılan yuvarlak kenarlı kart container'ı.
 struct SettingsCard<Content: View>: View {
     @ViewBuilder let content: Content
 
@@ -305,6 +312,7 @@ struct SettingsCard<Content: View>: View {
     }
 }
 
+/// Ayar kartlarındaki tekil satır: ikon, başlık, açıklama ve sağ tarafta kontrol.
 struct SettingsRow<Content: View>: View {
     let icon: String
     let iconColor: Color
@@ -337,6 +345,7 @@ struct SettingsRow<Content: View>: View {
     }
 }
 
+/// Kimlik bilgisi giriş alanı; `isSecure` true ise `SecureField` kullanır.
 struct CredentialField: View {
     let label: String
     let placeholder: String
@@ -362,6 +371,7 @@ struct CredentialField: View {
     }
 }
 
+/// Bağlantı testi için kullanılan renkli, yükleme göstergeli buton.
 struct TestButton: View {
     let title: String
     let icon: String
@@ -393,6 +403,9 @@ struct TestButton: View {
     }
 }
 
+/// Şarj eşiklerini renkli bir çubuk üzerinde görselleştiren bileşen.
+///
+/// Kırmızı bölge: şarj gerekli, turuncu-yeşil: optimal aralık, yeşil: dolu.
 struct BatteryRangeView: View {
     let onThreshold: Int
     let offThreshold: Int
@@ -463,6 +476,7 @@ struct BatteryRangeView: View {
     }
 }
 
+/// Priz listesindeki tekil satır; aktif seçim, manuel açma/kapama, düzenle ve sil butonları.
 struct PlugRow: View {
     let plug: PlugConfig
     let isActive: Bool
@@ -588,6 +602,7 @@ struct PlugRow: View {
     }
 }
 
+/// `BatteryRangeView` üzerindeki eşik işaretçisi (çizgi + daire + etiket).
 struct ThresholdMarker: View {
     let label: String
     let color: Color
