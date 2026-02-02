@@ -17,7 +17,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
-        // 3 saniye timeout - bundan sonra zorla kapat
+        // 3 seconds timeout - force close after this
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
             NSApp.reply(toApplicationShouldTerminate: true)
         }

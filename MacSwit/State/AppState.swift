@@ -3,6 +3,7 @@ import SwiftUI
 import ServiceManagement
 import AppKit
 import Combine
+import UserNotifications
 
 @MainActor
 final class AppState: ObservableObject {
@@ -102,6 +103,7 @@ final class AppState: ObservableObject {
             }
             .store(in: &cancellables)
 
+        requestNotificationPermission()
         restartTimer()
         Task { await syncLoginItem() }
         performCheck(reason: .startup)
@@ -241,6 +243,7 @@ private extension AppState {
             isPlugOn = desiredAction == .on
             lastActionMessage = "Plug \(desiredAction.displayText) at \(percent)%"
             statusMessage = lastActionMessage
+            postPlugNotification(action: desiredAction, percent: percent)
         } catch {
             statusMessage = "Command failed: \(error.localizedDescription)"
         }
@@ -312,6 +315,26 @@ private extension AppState {
             suppressLoginItemSync = false
         }
         statusMessage = "Login item error: \(explanatoryMessage)"
+    }
+
+    func requestNotificationPermission() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+    }
+
+    func postPlugNotification(action: PlugAction, percent: Int) {
+        let content = UNMutableNotificationContent()
+        content.title = "MacSwit"
+        content.body = action == .on
+            ? "Plug turned ON — battery at \(percent)%"
+            : "Plug turned OFF — battery at \(percent)%"
+        content.sound = .default
+
+        let request = UNNotificationRequest(
+            identifier: UUID().uuidString,
+            content: content,
+            trigger: nil
+        )
+        UNUserNotificationCenter.current().add(request)
     }
 
     func handleAppEnabledChange() {
