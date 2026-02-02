@@ -3,8 +3,9 @@ import Foundation
 /// Persisted configuration for a single smart plug.
 ///
 /// Each provider brand stores its fields in a dedicated MARK section below.
-/// The `accessSecret` is NOT stored here -- it lives in the Keychain under
-/// the key returned by `keychainAccount`.
+/// Credentials (`accessId` and `accessSecret`) are NOT stored here -- they
+/// live in the Keychain under the keys returned by `keychainAccessIdAccount`
+/// and `keychainAccount`.
 ///
 /// **To add a new provider's fields:**
 /// 1. Add a new MARK section with the provider-specific properties
@@ -21,7 +22,6 @@ struct PlugConfig: Codable, Identifiable, Equatable {
 
     var tuyaEndpointSelection: String
     var tuyaCustomEndpoint: String
-    var tuyaAccessId: String
     var tuyaDeviceId: String
     var tuyaDpCode: String
 
@@ -35,10 +35,14 @@ struct PlugConfig: Codable, Identifiable, Equatable {
     // MARK: - Keychain
     // =========================================================================
 
-    /// Keychain account name for this plug's secret (e.g. Tuya Access Secret).
-    /// Each plug gets its own keychain entry keyed by its UUID.
+    /// Keychain account name for this plug's Access Secret.
     var keychainAccount: String {
         "MacSwit.plug.\(id).accessSecret"
+    }
+
+    /// Keychain account name for this plug's Access ID.
+    var keychainAccessIdAccount: String {
+        "MacSwit.plug.\(id).accessId"
     }
 
     init(
@@ -48,7 +52,6 @@ struct PlugConfig: Codable, Identifiable, Equatable {
         // Tuya
         tuyaEndpointSelection: String = TuyaEndpoint.centralEurope.id,
         tuyaCustomEndpoint: String = "",
-        tuyaAccessId: String = "",
         tuyaDeviceId: String = "",
         tuyaDpCode: String = "switch_1"
     ) {
@@ -57,7 +60,6 @@ struct PlugConfig: Codable, Identifiable, Equatable {
         self.providerType = providerType
         self.tuyaEndpointSelection = tuyaEndpointSelection
         self.tuyaCustomEndpoint = tuyaCustomEndpoint
-        self.tuyaAccessId = tuyaAccessId
         self.tuyaDeviceId = tuyaDeviceId
         self.tuyaDpCode = tuyaDpCode
     }

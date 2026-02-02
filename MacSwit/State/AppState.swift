@@ -116,8 +116,9 @@ final class AppState: ObservableObject {
             currentController = nil
             return
         }
+        let accessId = plugStore.readAccessId(for: plug)
         let secret = plugStore.readSecret(for: plug)
-        currentController = PlugProviderFactory.make(config: plug, accessSecret: secret)
+        currentController = PlugProviderFactory.make(config: plug, accessId: accessId, accessSecret: secret)
     }
 
     func performCheck(reason: CheckReason = .automatic) {

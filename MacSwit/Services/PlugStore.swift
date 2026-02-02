@@ -5,6 +5,7 @@ import Combine
 final class PlugStore: ObservableObject {
     private static let plugConfigsKey = "MacSwit.plugConfigs"
     private static let activePlugIdKey = "MacSwit.activePlugId"
+    private static let accessIdMigratedKey = "MacSwit.accessIdMigrated"
 
     @Published var plugs: [PlugConfig] = []
     @Published var activePlugId: UUID?
@@ -39,8 +40,9 @@ final class PlugStore: ObservableObject {
 
     func delete(_ id: UUID) {
         guard let config = plugs.first(where: { $0.id == id }) else { return }
-        // Clean up keychain
+        // Clean up keychain entries
         try? keychain.deleteSecret(account: config.keychainAccount)
+        try? keychain.deleteSecret(account: config.keychainAccessIdAccount)
         plugs.removeAll { $0.id == id }
         if activePlugId == id {
             activePlugId = plugs.first?.id
@@ -65,6 +67,20 @@ final class PlugStore: ObservableObject {
             try keychain.deleteSecret(account: config.keychainAccount)
         } else {
             try keychain.saveSecret(secret, account: config.keychainAccount)
+        }
+    }
+
+    // MARK: - Access ID helpers
+
+    func readAccessId(for config: PlugConfig) -> String {
+        (try? keychain.readSecret(account: config.keychainAccessIdAccount)) ?? ""
+    }
+
+    func saveAccessId(_ accessId: String, for config: PlugConfig) throws {
+        if accessId.isEmpty {
+            try keychain.deleteSecret(account: config.keychainAccessIdAccount)
+        } else {
+            try keychain.saveSecret(accessId, account: config.keychainAccessIdAccount)
         }
     }
 

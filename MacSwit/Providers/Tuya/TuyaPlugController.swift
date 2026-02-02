@@ -8,11 +8,13 @@ import Foundation
 final class TuyaPlugController: PlugProviding {
     private let config: PlugConfig
     private let client: TuyaClient
+    private let accessId: String
     private let accessSecret: String
     private var configApplied = false
 
-    init(config: PlugConfig, accessSecret: String) {
+    init(config: PlugConfig, accessId: String, accessSecret: String) {
         self.config = config
+        self.accessId = accessId
         self.accessSecret = accessSecret
         self.client = TuyaClient()
     }
@@ -23,7 +25,7 @@ final class TuyaPlugController: PlugProviding {
 
     var missingFields: [String] {
         var missing: [String] = []
-        if config.tuyaAccessId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        if accessId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             missing.append("Access ID")
         }
         if accessSecret.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -79,7 +81,7 @@ final class TuyaPlugController: PlugProviding {
         configApplied = true
 
         let trimmedSecret = accessSecret.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedAccessId = config.tuyaAccessId.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedAccessId = accessId.trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard !trimmedSecret.isEmpty, !trimmedAccessId.isEmpty else {
             await client.updateConfiguration(nil)

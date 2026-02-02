@@ -40,7 +40,7 @@ struct MenuView: View {
             VStack(spacing: 16) {
                 // Battery icon
                 BatteryIcon(percent: appState.batteryPercent, color: batteryColor)
-                
+
                 // Threshold indicators
                 HStack(spacing: 24) {
                     ThresholdIndicator(
@@ -58,7 +58,7 @@ struct MenuView: View {
                 }
                 //.padding(.horizontal, 16)
                 //.padding(.bottom, 16)
-                
+
                 // Status badge
                 HStack(spacing: 6) {
                     Image(systemName: statusIcon)
@@ -112,7 +112,7 @@ struct MenuView: View {
 
             // Action buttons
             VStack(spacing: 4) {
-                
+
                 if appState.plugStore.plugs.count > 1 {
                     HStack(spacing: 12) {
                         Image(systemName: "powerplug")
@@ -142,7 +142,7 @@ struct MenuView: View {
                             .foregroundColor(.secondary)
                     }
                 }
-                
+
                 MenuToggleButton(
                     title: appState.appEnabled ? "Enabled" : "Disabled",
                     icon: appState.appEnabled ? "bolt.circle.fill" : "bolt.slash.circle",

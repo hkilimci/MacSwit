@@ -13,7 +13,6 @@ struct MacSwitApp: App {
     @StateObject private var appState: AppState
 
     init() {
-        // Run migrations before initializing state
         let initialState = AppState()
         _appState = StateObject(wrappedValue: initialState)
         appDelegate.appState = initialState

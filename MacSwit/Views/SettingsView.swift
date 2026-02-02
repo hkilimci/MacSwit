@@ -110,12 +110,14 @@ struct SettingsView: View {
                         description: "How often to check battery level"
                     ) {
                         Picker("", selection: $intervalSec) {
+                            Text("1 sec").tag(1)
+                            Text("15 secs").tag(15)
+                            Text("30 secs").tag(30)
                             Text("1 min").tag(60)
-                            Text("3 min").tag(180)
-                            Text("5 min").tag(300)
-                            Text("10 min").tag(600)
-                            Text("15 min").tag(900)
-                            Text("30 min").tag(1800)
+                            Text("5 mins").tag(300)
+                            Text("15 mins").tag(900)
+                            Text("30 mins").tag(1800)
+                            Text("1 hour").tag(3600)
                         }
                         .labelsHidden()
                         .frame(width: 100)
@@ -233,7 +235,7 @@ struct SettingsView: View {
                     SettingsRow(
                         icon: "moon.zzz.fill",
                         iconColor: .orange,
-                        title: "Switch off on shutdown",
+                        title: "Switch off on shutdown (Experimental)",
                         description: "Send switch OFF command when Mac is shutting down"
                     ) {
                         Toggle("", isOn: $switchOffOnShutdown)
@@ -576,8 +578,9 @@ struct PlugRow: View {
         lastResult = nil
         Task {
             defer { isSending = false }
+            let accessId = plugStore.readAccessId(for: plug)
             let secret = plugStore.readSecret(for: plug)
-            let controller = PlugProviderFactory.make(config: plug, accessSecret: secret)
+            let controller = PlugProviderFactory.make(config: plug, accessId: accessId, accessSecret: secret)
             do {
                 try await controller.sendCommand(value: value)
                 lastResult = value ? .on : .off

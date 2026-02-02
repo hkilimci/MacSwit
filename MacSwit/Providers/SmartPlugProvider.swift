@@ -94,12 +94,12 @@ protocol PlugProviding {
 /// **To add a new provider**, add a case to the switch below.
 enum PlugProviderFactory {
     @MainActor
-    static func make(config: PlugConfig, accessSecret: String) -> any PlugProviding {
+    static func make(config: PlugConfig, accessId: String, accessSecret: String) -> any PlugProviding {
         switch config.providerType {
         case .tuya:
-            return TuyaPlugController(config: config, accessSecret: accessSecret)
+            return TuyaPlugController(config: config, accessId: accessId, accessSecret: accessSecret)
         // case .meross:
-        //     return MerossPlugController(config: config, accessSecret: accessSecret)
+        //     return MerossPlugController(config: config, accessId: accessId, accessSecret: accessSecret)
         }
     }
 }

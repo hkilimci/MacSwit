@@ -8,6 +8,7 @@ struct PlugEditView: View {
 
     // Draft config holds all editable fields
     @State private var draft: PlugConfig
+    @State private var accessId: String = ""
     @State private var accessSecret: String = ""
 
     // Test state
@@ -142,6 +143,7 @@ struct PlugEditView: View {
         .frame(width: 480, height: 580)
         .onAppear {
             if let config = existingConfig {
+                accessId = appState.plugStore.readAccessId(for: config)
                 accessSecret = appState.plugStore.readSecret(for: config)
             }
         }
@@ -159,7 +161,7 @@ struct PlugEditView: View {
             TuyaPlugFieldsView(
                 endpointSelection: $draft.tuyaEndpointSelection,
                 customEndpoint: $draft.tuyaCustomEndpoint,
-                accessId: $draft.tuyaAccessId,
+                accessId: $accessId,
                 accessSecret: $accessSecret,
                 deviceId: $draft.tuyaDeviceId,
                 dpCode: $draft.tuyaDpCode
@@ -172,7 +174,7 @@ struct PlugEditView: View {
     // MARK: - Actions
 
     private func makeTestController() -> any PlugProviding {
-        PlugProviderFactory.make(config: draft, accessSecret: accessSecret)
+        PlugProviderFactory.make(config: draft, accessId: accessId, accessSecret: accessSecret)
     }
 
     private func savePlug() {
@@ -181,9 +183,10 @@ struct PlugEditView: View {
         if config.tuyaDpCode.isEmpty { config.tuyaDpCode = "switch_1" }
 
         do {
+            try appState.plugStore.saveAccessId(accessId, for: config)
             try appState.plugStore.saveSecret(accessSecret, for: config)
         } catch {
-            testStatus = "Failed to save secret: \(error.localizedDescription)"
+            testStatus = "Failed to save credentials: \(error.localizedDescription)"
             testStatusType = .error
             return
         }
