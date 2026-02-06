@@ -245,7 +245,7 @@ private extension AppState {
             statusMessage = lastActionMessage
             postPlugNotification(action: desiredAction, percent: percent)
         } catch {
-            statusMessage = "Command failed: \(error.localizedDescription)"
+            statusMessage = "\(error.localizedDescription)"
         }
     }
 
