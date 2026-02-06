@@ -1,6 +1,11 @@
 import SwiftUI
 import AppKit
 
+/// Menü çubuğundaki açılır pencere görünümü.
+///
+/// Pil yüzdesi, eşik göstergeleri, durum mesajı, aktif priz seçici ve
+/// hızlı işlem butonlarını (etkinleştir/devre dışı bırak, şimdi kontrol et,
+/// ayarlar, çık) gösterir.
 struct MenuView: View {
     @EnvironmentObject var appState: AppState
     @Environment(\.openSettings) private var openSettings
@@ -186,6 +191,7 @@ struct MenuView: View {
 
 // MARK: - Supporting Views
 
+/// Pil yüzdesini görsel olarak gösteren pil ikonu.
 struct BatteryIcon: View {
     let percent: Int
     let color: Color
@@ -231,6 +237,7 @@ struct BatteryIcon: View {
     }
 }
 
+/// Eşik değerini (ör. "Charge at 80%") ikon ve etiketle gösteren bileşen.
 struct ThresholdIndicator: View {
     let label: String
     let value: Int
@@ -253,6 +260,7 @@ struct ThresholdIndicator: View {
     }
 }
 
+/// Menü popup'ındaki standart işlem butonu.
 struct MenuButton: View {
     let title: String
     let icon: String
@@ -268,6 +276,7 @@ struct MenuButton: View {
     }
 }
 
+/// `MenuButton` için hover efektli etiket görünümü.
 struct MenuButtonLabel: View {
     let title: String
     let icon: String
@@ -300,6 +309,7 @@ struct MenuButtonLabel: View {
     }
 }
 
+/// Açık/kapalı durumu olan menü toggle butonu (ör. "Enabled" / "Disabled").
 struct MenuToggleButton: View {
     let title: String
     let icon: String

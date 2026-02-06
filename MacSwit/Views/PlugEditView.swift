@@ -1,5 +1,10 @@
 import SwiftUI
 
+/// Yeni priz ekleme veya mevcut prizi düzenleme formu.
+///
+/// İsim, sağlayıcı seçimi, sağlayıcıya özel alanlar (Tuya kimlik bilgileri vb.)
+/// ve bağlantı testi bölümlerini içerir. Kaydetme işleminde yapılandırmayı
+/// `PlugStore`'a, kimlik bilgisini ise Keychain'e yazar.
 struct PlugEditView: View {
     @EnvironmentObject var appState: AppState
     @Environment(\.dismiss) private var dismiss

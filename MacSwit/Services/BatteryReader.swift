@@ -1,6 +1,10 @@
 import Foundation
 import IOKit.ps
 
+/// Mac'in pil yüzdesini okuyan yardımcı yapı.
+///
+/// Öncelikle IOKit (`IOPSCopyPowerSourcesInfo`) üzerinden okuma yapar;
+/// başarısız olursa yedek olarak `pmset -g batt` komutunu kullanır.
 struct BatteryReader {
     enum BatteryError: LocalizedError {
         case notAvailable

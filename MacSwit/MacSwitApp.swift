@@ -7,6 +7,10 @@
 
 import SwiftUI
 
+/// Uygulamanın SwiftUI giriş noktası.
+///
+/// Menü çubuğunda priz simgesi gösterir (`MenuBarExtra`) ve ayarlar penceresini
+/// (`Settings`) barındırır. `AppDelegate` ile `AppState` arasındaki bağlantıyı kurar.
 @main
 struct MacSwitApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate

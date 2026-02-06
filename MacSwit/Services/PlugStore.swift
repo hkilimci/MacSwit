@@ -1,6 +1,11 @@
 import Foundation
 import Combine
 
+/// Akıllı priz yapılandırmalarının kalıcı deposu.
+///
+/// Priz listesini `UserDefaults` üzerinde, hassas kimlik bilgilerini (Access Secret)
+/// ise `KeychainStore` üzerinde saklar. CRUD işlemleri, aktif priz seçimi ve
+/// Keychain entegrasyonunu sağlar.
 @MainActor
 final class PlugStore: ObservableObject {
     private static let plugConfigsKey = "MacSwit.plugConfigs"
