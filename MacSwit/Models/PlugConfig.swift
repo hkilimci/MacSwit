@@ -26,6 +26,14 @@ struct PlugConfig: Codable, Identifiable, Equatable {
     var tuyaDpCode: String
 
     // =========================================================================
+    // MARK: - TP-Link (Kasa) specific fields
+    // =========================================================================
+
+    var tplinkEndpointSelection: String
+    var tplinkCustomEndpoint: String
+    var tplinkDeviceId: String
+
+    // =========================================================================
     // MARK: - (Next provider) Add fields here
     // =========================================================================
     // var merossEmail: String
@@ -53,7 +61,11 @@ struct PlugConfig: Codable, Identifiable, Equatable {
         tuyaEndpointSelection: String = TuyaEndpoint.centralEurope.id,
         tuyaCustomEndpoint: String = "",
         tuyaDeviceId: String = "",
-        tuyaDpCode: String = "switch_1"
+        tuyaDpCode: String = "switch_1",
+        // TP-Link
+        tplinkEndpointSelection: String = TPLinkEndpoint.global.id,
+        tplinkCustomEndpoint: String = "",
+        tplinkDeviceId: String = ""
     ) {
         self.id = id
         self.name = name
@@ -62,5 +74,8 @@ struct PlugConfig: Codable, Identifiable, Equatable {
         self.tuyaCustomEndpoint = tuyaCustomEndpoint
         self.tuyaDeviceId = tuyaDeviceId
         self.tuyaDpCode = tuyaDpCode
+        self.tplinkEndpointSelection = tplinkEndpointSelection
+        self.tplinkCustomEndpoint = tplinkCustomEndpoint
+        self.tplinkDeviceId = tplinkDeviceId
     }
 }

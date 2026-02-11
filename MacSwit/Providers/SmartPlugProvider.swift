@@ -16,20 +16,22 @@ import Foundation
 /// 7. Add provider-specific fields to `PlugConfig` in a new MARK section
 enum ProviderType: String, CaseIterable, Identifiable, Codable {
     case tuya = "tuya"
+    case tplink = "tplink"
     // case meross = "meross"
-    // case kasa = "kasa"
 
     var id: String { rawValue }
 
     var displayName: String {
         switch self {
         case .tuya: return "Tuya"
+        case .tplink: return "TP-Link Kasa"
         }
     }
 
     var iconName: String {
         switch self {
         case .tuya: return "network"
+        case .tplink: return "wifi"
         }
     }
 }
@@ -95,6 +97,8 @@ enum PlugProviderFactory {
         switch config.providerType {
         case .tuya:
             return TuyaPlugController(config: config, accessId: accessId, accessSecret: accessSecret)
+        case .tplink:
+            return TPLinkPlugController(config: config, email: accessId, password: accessSecret)
         // case .meross:
         //     return MerossPlugController(config: config, accessId: accessId, accessSecret: accessSecret)
         }

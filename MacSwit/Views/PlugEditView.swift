@@ -171,6 +171,14 @@ struct PlugEditView: View {
                 deviceId: $draft.tuyaDeviceId,
                 dpCode: $draft.tuyaDpCode
             )
+        case .tplink:
+            TPLinkPlugFieldsView(
+                endpointSelection: $draft.tplinkEndpointSelection,
+                customEndpoint: $draft.tplinkCustomEndpoint,
+                email: $accessId,
+                password: $accessSecret,
+                deviceId: $draft.tplinkDeviceId
+            )
         // case .meross:
         //     MerossPlugFieldsView(...)
         }
