@@ -89,6 +89,24 @@ actor TuyaClient {
         }
     }
 
+    /// Fast shutdown path: skips the online-check round-trip and relaxes
+    /// result verification. Always sends OFF (`value: false`).
+    func sendShutdownCommand(device: DeviceConfiguration) async throws {
+        let body = TuyaCommandBody(commands: [.init(code: device.dpCode, value: false)])
+        let data = try JSONEncoder().encode(body)
+        let path = "/v1.0/iot-03/devices/\(device.deviceId)/commands"
+        let response: TuyaAPIResponse<Bool> = try await performRequest(path: path, method: "POST", body: data)
+        guard response.success else {
+            throw TuyaClientError.apiError(code: response.code ?? "unknown", message: response.msg ?? "Shutdown command failed")
+        }
+    }
+
+    /// Pre-warms the cached token so it is ready at shutdown without a
+    /// round-trip to the token endpoint.
+    func warmToken() async throws {
+        _ = try await ensureToken()
+    }
+
     func checkDeviceOnline(deviceId: String) async throws -> Bool {
         let path = "/v1.0/iot-03/devices/\(deviceId)"
         let response: TuyaAPIResponse<DeviceInfo> = try await performRequest(path: path, method: "GET", body: nil)
