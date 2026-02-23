@@ -80,6 +80,22 @@ protocol PlugProviding {
 
     /// Test the connection/authentication without sending a command
     func testConnection() async throws
+
+    /// Pre-warms any cached authentication token so it is ready at shutdown.
+    func warmToken() async throws
+
+    /// Sends the OFF command via the fastest possible path.
+    /// Providers should skip online-checks and relax result verification.
+    /// Default implementation falls back to `sendCommand(value: false)`.
+    func sendShutdownCommandFast() async throws
+}
+
+extension PlugProviding {
+    func warmToken() async throws {}
+
+    func sendShutdownCommandFast() async throws {
+        try await sendCommand(value: false)
+    }
 }
 
 // =============================================================================

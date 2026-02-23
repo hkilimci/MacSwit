@@ -8,6 +8,7 @@ enum SettingsKey {
     static let startAtLogin = "MacSwit.startAtLogin"
     static let appEnabled = "MacSwit.appEnabled"
     static let switchOffOnShutdown = "MacSwit.switchOffOnShutdown"
+    static let shutdownLog = "MacSwit.shutdownLog"
 }
 
 /// Application-wide default values.

@@ -4,6 +4,20 @@ import ServiceManagement
 import Combine
 import UserNotifications
 
+// MARK: - Shutdown log
+
+struct ShutdownLogEntry: Codable, Identifiable {
+    enum Outcome: String, Codable {
+        case attempted, succeeded, error, timeout
+    }
+
+    var id: UUID = UUID()
+    var date: Date
+    var reason: String
+    var outcome: Outcome
+    var detail: String?
+}
+
 /// Central state manager for the application.
 ///
 /// Periodically reads battery level and toggles the smart plug on/off
@@ -52,12 +66,17 @@ final class AppState: ObservableObject {
     @AppStorage(SettingsKey.appEnabled) var appEnabled: Bool = true {
         didSet { handleAppEnabledChange() }
     }
-    @AppStorage(SettingsKey.switchOffOnShutdown) var switchOffOnShutdown: Bool = false
+    @AppStorage(SettingsKey.switchOffOnShutdown) var switchOffOnShutdown: Bool = false {
+        didSet { handleSwitchOffOnShutdownChange() }
+    }
+
+    @Published var shutdownLog: [ShutdownLogEntry] = []
 
     let plugStore: PlugStore
 
     private let batteryReader = BatteryReader()
     private var timer: Timer?
+    private var warmTimer: Timer?
     private var lastAction: PlugAction?
     private var suppressLoginItemSync = false
     private var currentController: (any PlugProviding)?
@@ -101,13 +120,19 @@ final class AppState: ObservableObject {
             .store(in: &cancellables)
 
         requestNotificationPermission()
+        loadShutdownLog()
         restartTimer()
+        if switchOffOnShutdown {
+            startWarmTimer()
+            Task { try? await warmProviderToken() }
+        }
         Task { await syncLoginItem() }
         performCheck(reason: .startup)
     }
 
     deinit {
         timer?.invalidate()
+        warmTimer?.invalidate()
     }
 
     func setupController() {
@@ -170,16 +195,41 @@ final class AppState: ObservableObject {
         try await controller.testConnection()
     }
 
-    func sendShutdownCommand() async {
+    /// Sends the OFF command on the fast shutdown path with one retry.
+    /// Logs each attempt and its outcome to `shutdownLog`.
+    ///
+    /// - Parameter reason: Human-readable trigger context ("shutdown", "quit", "sleep").
+    func sendShutdownCommand(reason: String) async {
         guard switchOffOnShutdown else { return }
         guard let controller = currentController, controller.isConfigured else { return }
 
-        do {
-            try await controller.sendCommand(value: false)
-            isPlugOn = false
-        } catch {
-            // Silently ignore errors during shutdown
+        appendShutdownLog(ShutdownLogEntry(date: Date(), reason: reason, outcome: .attempted))
+
+        var lastError: Error?
+        for attempt in 1...2 {
+            do {
+                try await controller.sendShutdownCommandFast()
+                isPlugOn = false
+                appendShutdownLog(ShutdownLogEntry(date: Date(), reason: reason, outcome: .succeeded))
+                return
+            } catch {
+                lastError = error
+                if attempt < 2 {
+                    try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 s before retry
+                }
+            }
         }
+        appendShutdownLog(ShutdownLogEntry(
+            date: Date(),
+            reason: reason,
+            outcome: .error,
+            detail: lastError?.localizedDescription
+        ))
+    }
+
+    /// Appends a `.timeout` log entry. `internal` so `AppDelegate` can call it.
+    func logShutdownTimeout(reason: String) {
+        appendShutdownLog(ShutdownLogEntry(date: Date(), reason: reason, outcome: .timeout))
     }
 }
 
@@ -322,5 +372,56 @@ private extension AppState {
 
     func handleAppEnabledChange() {
         performCheck(reason: .manual)
+    }
+
+    func handleSwitchOffOnShutdownChange() {
+        if switchOffOnShutdown {
+            startWarmTimer()
+            Task { try? await warmProviderToken() }
+        } else {
+            warmTimer?.invalidate()
+            warmTimer = nil
+        }
+    }
+
+    // MARK: - Token warming
+
+    func startWarmTimer() {
+        warmTimer?.invalidate()
+        warmTimer = Timer.scheduledTimer(
+            timeInterval: 20 * 60,
+            target: self,
+            selector: #selector(handleWarmTimerFired),
+            userInfo: nil,
+            repeats: true
+        )
+    }
+
+    @objc func handleWarmTimerFired() {
+        Task { try? await warmProviderToken() }
+    }
+
+    func warmProviderToken() async throws {
+        guard let controller = currentController, controller.isConfigured else { return }
+        try await controller.warmToken()
+    }
+
+    // MARK: - Shutdown logging
+
+    func loadShutdownLog() {
+        guard let data = UserDefaults.standard.data(forKey: SettingsKey.shutdownLog),
+              let entries = try? JSONDecoder().decode([ShutdownLogEntry].self, from: data)
+        else { return }
+        shutdownLog = entries
+    }
+
+    func appendShutdownLog(_ entry: ShutdownLogEntry) {
+        var log = shutdownLog
+        log.append(entry)
+        if log.count > 20 { log = Array(log.suffix(20)) }
+        shutdownLog = log
+        if let data = try? JSONEncoder().encode(log) {
+            UserDefaults.standard.set(data, forKey: SettingsKey.shutdownLog)
+        }
     }
 }
