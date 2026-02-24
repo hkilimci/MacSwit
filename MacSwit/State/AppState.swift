@@ -178,7 +178,7 @@ final class AppState: ObservableObject {
                     batteryPercent = percent
                     lastCheckDate = Date()
                 }
-                statusMessage = "Event mode – awaiting system events"
+                statusMessage = appEnabled ? "Event mode – awaiting system events" : "App disabled"
             }
             return
         }
@@ -235,6 +235,7 @@ final class AppState: ObservableObject {
     ///
     /// - Parameter reason: Human-readable trigger context ("shutdown", "quit", "sleep").
     func sendShutdownCommand(reason: String) async {
+        guard appEnabled else { return }
         guard shouldSendOffOnShutdown else { return }
         guard let controller = currentController, controller.isConfigured else { return }
 

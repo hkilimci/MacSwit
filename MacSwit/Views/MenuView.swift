@@ -1,5 +1,5 @@
-import SwiftUI
 import AppKit
+import SwiftUI
 
 /// Menu bar popup view.
 ///
@@ -19,17 +19,25 @@ struct MenuView: View {
     private var batteryColor: Color {
         guard appState.mode == .threshold else { return .blue }
         let percent = appState.batteryPercent
-        if percent <= appState.onThreshold { return .red }
-        else if percent >= appState.offThreshold { return .green }
-        else { return .orange }
+        if percent <= appState.onThreshold {
+            return .red
+        } else if percent >= appState.offThreshold {
+            return .green
+        } else {
+            return .orange
+        }
     }
 
     private var statusIcon: String {
         guard appState.mode == .threshold else { return "power" }
         let percent = appState.batteryPercent
-        if percent <= appState.onThreshold { return "bolt.fill" }
-        else if percent >= appState.offThreshold { return "bolt.slash.fill" }
-        else { return "bolt.badge.clock.fill" }
+        if percent <= appState.onThreshold {
+            return "bolt.fill"
+        } else if percent >= appState.offThreshold {
+            return "bolt.slash.fill"
+        } else {
+            return "bolt.badge.clock.fill"
+        }
     }
 
     var body: some View {
@@ -84,7 +92,7 @@ struct MenuView: View {
             .padding(.bottom, 16)
 
             // Last action info
-            VStack(spacing: 4) {
+            HStack(spacing: 4) {
                 if !appState.lastActionMessage.isEmpty {
                     HStack(spacing: 6) {
                         Image(systemName: "clock.arrow.circlepath")
@@ -110,7 +118,7 @@ struct MenuView: View {
 
             Divider()
                 .padding(.horizontal, 16)
-                .padding(.bottom,6)
+                .padding(.bottom, 6)
 
             // Action buttons
             VStack(spacing: 4) {
@@ -120,12 +128,15 @@ struct MenuView: View {
                         Image(systemName: "powerplug")
                             .font(.system(size: 10))
                             .foregroundColor(.secondary)
-                        Picker("", selection: Binding(
-                            get: { appState.plugStore.activePlugId },
-                            set: { id in
-                                if let id { appState.plugStore.setActive(id) }
-                            }
-                        )) {
+                        Picker(
+                            "",
+                            selection: Binding(
+                                get: { appState.plugStore.activePlugId },
+                                set: { id in
+                                    if let id { appState.plugStore.setActive(id) }
+                                }
+                            )
+                        ) {
                             ForEach(appState.plugStore.plugs) { plug in
                                 Text(plug.name).tag(Optional(plug.id))
                             }
@@ -159,7 +170,8 @@ struct MenuView: View {
                     openSettings()
                     // Bring Settings window to front if already open
                     DispatchQueue.main.async {
-                        for window in NSApp.windows where window.identifier?.rawValue == "com_apple_SwiftUI_Settings_window" {
+                        for window in NSApp.windows
+                        where window.identifier?.rawValue == "com_apple_SwiftUI_Settings_window" {
                             window.makeKeyAndOrderFront(nil)
                         }
                     }
