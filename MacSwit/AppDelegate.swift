@@ -5,9 +5,10 @@ import AppKit
 /// Shutdown path (in priority order):
 ///
 /// 1. **`willSleepNotification`** — fire-and-forget OFF when the system sleeps.
-/// 2. **`willPowerOffNotification`** — synchronous OFF (RunLoop-spin, 8 s window,
+/// 2. **`didWakeNotification`** — fire-and-forget ON after wake (mirrors launch actions).
+/// 3. **`willPowerOffNotification`** — synchronous OFF (RunLoop-spin, 8 s window,
 ///    one retry). Fixes the `applicationShouldTerminate` race via `ShutdownState`.
-/// 3. **`applicationShouldTerminate`** — async `.terminateLater` path for normal
+/// 4. **`applicationShouldTerminate`** — async `.terminateLater` path for normal
 ///    quit. Returns `.terminateNow` immediately when work is already `.finished`.
 class AppDelegate: NSObject, NSApplicationDelegate {
     var appState: AppState?
@@ -29,6 +30,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var powerOffObserver: Any?
     private var sleepObserver: Any?
+    private var wakeObserver: Any?
 
     // MARK: - Lifecycle
 
@@ -48,6 +50,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         ) { [weak self] _ in
             self?.sendShutdownCommandForSleep()
         }
+
+        wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.sendWakeCommand()
+        }
     }
 
     deinit {
@@ -55,6 +65,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             NSWorkspace.shared.notificationCenter.removeObserver(observer)
         }
         if let observer = sleepObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(observer)
+        }
+        if let observer = wakeObserver {
             NSWorkspace.shared.notificationCenter.removeObserver(observer)
         }
     }
@@ -108,6 +121,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         Task { @MainActor in
             await appState.sendShutdownCommand(reason: "sleep")
+        }
+    }
+
+    // MARK: - Wake path (didWakeNotification)
+
+    /// Turns the plug back ON after the system wakes from sleep.
+    /// Reuses `performLaunchActions` so the same `shouldPlugOnAtStart` /
+    /// `appEnabled` / provider-configured guards apply.
+    private func sendWakeCommand() {
+        guard let appState = appState,
+              appState.appEnabled,
+              appState.providerConfigured else { return }
+
+        Task { @MainActor in
+            await appState.performLaunchActions()
         }
     }
 
