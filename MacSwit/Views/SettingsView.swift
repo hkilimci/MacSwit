@@ -15,7 +15,12 @@ struct SettingsView: View {
     @AppStorage(SettingsKey.startAtLogin) private var startAtLogin = false
     @AppStorage(SettingsKey.appEnabled) private var appEnabled = true
     @AppStorage(SettingsKey.switchOffOnShutdown) private var switchOffOnShutdown = false
+    @AppStorage(SettingsKey.mode) private var mode: PowerManagementMode = .threshold
+    @AppStorage(SettingsKey.idleGateEnabled) private var idleGateEnabled = false
+    @AppStorage(SettingsKey.idleMinutes) private var idleMinutes = Constants.defaultIdleMinutes
+    @AppStorage(SettingsKey.plugOnAtStart) private var plugOnAtStart = false
     @State private var selectedTab = 0
+    @State private var settingsTab: PowerManagementMode = .threshold
     @State private var showAddPlug = false
     @State private var editingPlug: PlugConfig?
 
@@ -45,70 +50,143 @@ struct SettingsView: View {
     // MARK: - Battery Tab
 
     private var batteryTab: some View {
-        VStack(spacing: 0) {
-            // Battery visualization header
+        ScrollView {
             VStack(spacing: 16) {
-                BatteryRangeView(onThreshold: onThreshold, offThreshold: offThreshold)
-                    .frame(height: 60)
-                    .padding(.horizontal, 24)
-            }
-            .padding(.vertical, 24)
-            .frame(maxWidth: .infinity)
-            .background(Color.primary.opacity(0.03))
+                // Active mode selector — controls which mode is actually running
+                SettingsCard {
+                    SettingsRow(
+                        icon: "slider.horizontal.3",
+                        iconColor: .purple,
+                        title: "Active Mode",
+                        description: mode.modeDescription
+                    ) {
+                        Picker("", selection: $mode) {
+                            ForEach(PowerManagementMode.allCases) { m in
+                                Text(m.displayName).tag(m)
+                            }
+                        }
+                        .labelsHidden()
+                        .frame(width: 130)
+                    }
+                }
 
-            // Controls
-            VStack(spacing: 20) {
+                // Startup & shutdown — applies regardless of mode
                 SettingsCard {
                     VStack(alignment: .leading, spacing: 16) {
                         SettingsRow(
-                            icon: "bolt.fill",
-                            iconColor: .red,
-                            title: "Start charging at",
-                            description: "Turn the plug ON when battery drops to this level"
+                            icon: "bolt.circle.fill",
+                            iconColor: .green,
+                            title: "Turn plug ON at startup",
+                            description: "Send switch ON command when MacSwit launches"
                         ) {
-                            HStack(spacing: 8) {
-                                Slider(value: .init(
-                                    get: { Double(onThreshold) },
-                                    set: { newValue in
-                                        let clamped = min(Int(newValue), offThreshold - 5)
-                                        onThreshold = max(5, clamped)
-                                    }
-                                ), in: 5...95)
-                                .frame(width: 120)
-
-                                Text("\(onThreshold)%")
-                                    .font(.system(size: 14, weight: .semibold, design: .rounded))
-                                    .frame(width: 40)
-                            }
+                            Toggle("", isOn: mode == .event ? .constant(true) : $plugOnAtStart)
+                                .labelsHidden()
+                                .toggleStyle(.switch)
+                                .disabled(mode == .event)
                         }
 
                         Divider()
 
                         SettingsRow(
-                            icon: "bolt.slash.fill",
-                            iconColor: .green,
-                            title: "Stop charging at",
-                            description: "Turn the plug OFF when battery reaches this level"
+                            icon: "moon.zzz.fill",
+                            iconColor: .orange,
+                            title: "Turn plug OFF on shutdown",
+                            description: "Send switch OFF command when Mac shuts down"
                         ) {
-                            HStack(spacing: 8) {
-                                Slider(value: .init(
+                            Toggle(
+                                "", isOn: mode == .event ? .constant(true) : $switchOffOnShutdown
+                            )
+                            .labelsHidden()
+                            .toggleStyle(.switch)
+                            .disabled(mode == .event)
+                        }
+                    }
+                }
+
+                // Mode settings tabs — navigate to configure each mode independently
+                Picker("", selection: $settingsTab) {
+                    ForEach(PowerManagementMode.allCases) { m in
+                        Text(m.displayName).tag(m)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+
+                modeSettingsContent
+                    .padding(24)
+
+                Spacer(minLength: 16)
+            }
+        }
+        .onAppear { settingsTab = mode }
+    }
+
+    @ViewBuilder
+    private var modeSettingsContent: some View {
+        switch settingsTab {
+        case .threshold:
+            thresholdSettingsContent
+        case .event:
+            eventSettingsContent
+        }
+    }
+
+    private var thresholdSettingsContent: some View {
+        VStack(spacing: 16) {
+            SettingsCard {
+                VStack(alignment: .leading, spacing: 16) {
+                    SettingsRow(
+                        icon: "bolt.fill",
+                        iconColor: .red,
+                        title: "Start charging at",
+                        description: "Turn the plug ON when battery drops to this level"
+                    ) {
+                        HStack(spacing: 8) {
+                            Slider(
+                                value: .init(
+                                    get: { Double(onThreshold) },
+                                    set: { newValue in
+                                        let clamped = min(Int(newValue), offThreshold - 5)
+                                        onThreshold = max(5, clamped)
+                                    }
+                                ), in: 5...95
+                            )
+                            .frame(width: 120)
+
+                            Text("\(onThreshold)%")
+                                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                .frame(width: 40)
+                        }
+                    }
+
+                    Divider()
+
+                    SettingsRow(
+                        icon: "bolt.slash.fill",
+                        iconColor: .green,
+                        title: "Stop charging at",
+                        description: "Turn the plug OFF when battery reaches this level"
+                    ) {
+                        HStack(spacing: 8) {
+                            Slider(
+                                value: .init(
                                     get: { Double(offThreshold) },
                                     set: { newValue in
                                         let clamped = max(Int(newValue), onThreshold + 5)
                                         offThreshold = min(100, clamped)
                                     }
-                                ), in: 10...100)
-                                .frame(width: 120)
+                                ), in: 10...100
+                            )
+                            .frame(width: 120)
 
-                                Text("\(offThreshold)%")
-                                    .font(.system(size: 14, weight: .semibold, design: .rounded))
-                                    .frame(width: 40)
-                            }
+                            Text("\(offThreshold)%")
+                                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                .frame(width: 40)
                         }
                     }
-                }
 
-                SettingsCard {
+                    Divider()
+
                     SettingsRow(
                         icon: "clock",
                         iconColor: .blue,
@@ -125,11 +203,57 @@ struct SettingsView: View {
                         .labelsHidden()
                         .frame(width: 100)
                     }
+
+                    Divider()
+
+                    SettingsRow(
+                        icon: "moon.zzz.fill",
+                        iconColor: .indigo,
+                        title: "Only turn OFF when idle",
+                        description: "Wait until the system is idle before cutting power"
+                    ) {
+                        Toggle("", isOn: $idleGateEnabled)
+                            .labelsHidden()
+                            .toggleStyle(.switch)
+                    }
+
+                    if idleGateEnabled {
+                        SettingsRow(
+                            icon: "timer",
+                            iconColor: .indigo,
+                            title: "Idle time required",
+                            description:
+                                "How long the system must be idle before the plug turns OFF"
+                        ) {
+                            Picker("", selection: $idleMinutes) {
+                                Text("10 min").tag(10)
+                                Text("20 min").tag(20)
+                                Text("30 min").tag(30)
+                                Text("45 min").tag(45)
+                                Text("60 min").tag(60)
+                            }
+                            .labelsHidden()
+                            .frame(width: 100)
+                        }
+                    }
                 }
             }
-            .padding(24)
+        }
+    }
 
-            Spacer()
+    private var eventSettingsContent: some View {
+        SettingsCard {
+            VStack(alignment: .leading, spacing: 8) {
+                Label("No battery monitoring", systemImage: "info.circle")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(.secondary)
+                Text(
+                    "In Event mode the plug is controlled only by the startup and shutdown toggles above. Battery level is not checked."
+                )
+                .font(.system(size: 11))
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 
@@ -233,18 +357,6 @@ struct SettingsView: View {
                             .disabled(!appState.loginItemSupported)
                     }
 
-                    Divider()
-
-                    SettingsRow(
-                        icon: "moon.zzz.fill",
-                        iconColor: .orange,
-                        title: "Switch off on shutdown (Experimental)",
-                        description: "Send switch OFF command when Mac is shutting down"
-                    ) {
-                        Toggle("", isOn: $switchOffOnShutdown)
-                            .labelsHidden()
-                            .toggleStyle(.switch)
-                    }
                 }
             }
 
@@ -488,7 +600,8 @@ struct PlugRow: View {
     @State private var lastResult: SwitchResult?
 
     private enum SwitchResult {
-        case on, off, error(String)
+        case on, off
+        case error(String)
     }
 
     var body: some View {
@@ -570,17 +683,17 @@ struct PlugRow: View {
 
     private func buttonBackground(for value: Bool) -> Color {
         switch lastResult {
-        case .on where value:   return .green.opacity(0.25)
+        case .on where value: return .green.opacity(0.25)
         case .off where !value: return .orange.opacity(0.25)
-        default:                return Color.primary.opacity(0.06)
+        default: return Color.primary.opacity(0.06)
         }
     }
 
     private func buttonForeground(for value: Bool) -> Color {
         switch lastResult {
-        case .on where value:   return .green
+        case .on where value: return .green
         case .off where !value: return .orange
-        default:                return .secondary
+        default: return .secondary
         }
     }
 
@@ -591,7 +704,8 @@ struct PlugRow: View {
             defer { isSending = false }
             let accessId = plugStore.readAccessId(for: plug)
             let secret = plugStore.readSecret(for: plug)
-            let controller = PlugProviderFactory.make(config: plug, accessId: accessId, accessSecret: secret)
+            let controller = PlugProviderFactory.make(
+                config: plug, accessId: accessId, accessSecret: secret)
             do {
                 try await controller.sendCommand(value: value)
                 lastResult = value ? .on : .off

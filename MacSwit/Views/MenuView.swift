@@ -17,25 +17,19 @@ struct MenuView: View {
     }()
 
     private var batteryColor: Color {
+        guard appState.mode == .threshold else { return .blue }
         let percent = appState.batteryPercent
-        if percent <= appState.onThreshold {
-            return .red
-        } else if percent >= appState.offThreshold {
-            return .green
-        } else {
-            return .orange
-        }
+        if percent <= appState.onThreshold { return .red }
+        else if percent >= appState.offThreshold { return .green }
+        else { return .orange }
     }
 
     private var statusIcon: String {
+        guard appState.mode == .threshold else { return "power" }
         let percent = appState.batteryPercent
-        if percent <= appState.onThreshold {
-            return "bolt.fill"
-        } else if percent >= appState.offThreshold {
-            return "bolt.slash.fill"
-        } else {
-            return "bolt.badge.clock.fill"
-        }
+        if percent <= appState.onThreshold { return "bolt.fill" }
+        else if percent >= appState.offThreshold { return "bolt.slash.fill" }
+        else { return "bolt.badge.clock.fill" }
     }
 
     var body: some View {
@@ -45,23 +39,27 @@ struct MenuView: View {
                 // Battery icon
                 BatteryIcon(percent: appState.batteryPercent, color: batteryColor)
 
-                // Threshold indicators
-                HStack(spacing: 24) {
-                    ThresholdIndicator(
-                        label: "Charge at",
-                        value: appState.onThreshold,
-                        icon: "bolt.fill",
-                        color: .red
-                    )
-                    ThresholdIndicator(
-                        label: "Stop at",
-                        value: appState.offThreshold,
-                        icon: "bolt.slash.fill",
-                        color: .green
-                    )
+                // Threshold indicators or event mode label
+                if appState.mode == .threshold {
+                    HStack(spacing: 24) {
+                        ThresholdIndicator(
+                            label: "Charge at",
+                            value: appState.onThreshold,
+                            icon: "bolt.fill",
+                            color: .red
+                        )
+                        ThresholdIndicator(
+                            label: "Stop at",
+                            value: appState.offThreshold,
+                            icon: "bolt.slash.fill",
+                            color: .green
+                        )
+                    }
+                } else {
+                    Label("Event-Based Mode", systemImage: "power")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.blue)
                 }
-                //.padding(.horizontal, 16)
-                //.padding(.bottom, 16)
 
                 // Status badge
                 HStack(spacing: 6) {

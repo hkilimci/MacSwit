@@ -72,7 +72,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private func sendShutdownCommandSynchronously(reason: String) {
         guard shutdownState == .idle,
               let appState = appState,
-              appState.switchOffOnShutdown,
+              appState.shouldSendOffOnShutdown,
               appState.providerConfigured else { return }
 
         shutdownState = .inProgress
@@ -103,7 +103,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     /// pre-warmed token makes completion before sleep likely.
     private func sendShutdownCommandForSleep() {
         guard let appState = appState,
-              appState.switchOffOnShutdown,
+              appState.shouldSendOffOnShutdown,
               appState.providerConfigured else { return }
 
         Task { @MainActor in
@@ -130,7 +130,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         guard let appState = appState,
-              appState.switchOffOnShutdown,
+              appState.shouldSendOffOnShutdown,
               appState.providerConfigured else {
             return .terminateNow
         }
