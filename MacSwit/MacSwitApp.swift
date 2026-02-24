@@ -1,10 +1,3 @@
-//
-//  MacSwitApp.swift
-//  MacSwit
-//
-//  Created by Hasan Harun Kilimci on 23.01.2026.
-//
-
 import SwiftUI
 
 /// SwiftUI entry point for the application.

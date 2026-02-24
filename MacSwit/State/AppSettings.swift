@@ -9,6 +9,11 @@ enum SettingsKey {
     static let appEnabled = "MacSwit.appEnabled"
     static let switchOffOnShutdown = "MacSwit.switchOffOnShutdown"
     static let shutdownLog = "MacSwit.shutdownLog"
+    static let mode = "MacSwit.mode"
+    static let idleGateEnabled = "MacSwit.idleGateEnabled"
+    static let idleMinutes = "MacSwit.idleMinutes"
+    static let plugOnAtStart = "MacSwit.plugOnAtStart"
+    static let lastUpdateCheck = "MacSwit.lastUpdateCheck"
 }
 
 /// Application-wide default values.
@@ -16,4 +21,5 @@ enum Constants {
     static let defaultOnThreshold = 80
     static let defaultOffThreshold = 100
     static let defaultInterval = 300
+    static let defaultIdleMinutes = 30
 }

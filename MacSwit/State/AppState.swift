@@ -47,6 +47,10 @@ final class AppState: ObservableObject {
     @Published var isChecking: Bool = false
     @Published var lastCheckDate: Date?
     @Published var isPlugOn: Bool = false
+    @Published var updateAvailable: String? = nil
+    @Published var updateURL: URL? = nil
+    @Published var latestReleasedVersion: String? = nil
+    @Published var isCheckingForUpdates: Bool = false
 
     @AppStorage(SettingsKey.onThreshold) var onThreshold: Int = Constants.defaultOnThreshold {
         didSet { _ = validateThresholds() }
@@ -69,15 +73,21 @@ final class AppState: ObservableObject {
     @AppStorage(SettingsKey.switchOffOnShutdown) var switchOffOnShutdown: Bool = false {
         didSet { handleSwitchOffOnShutdownChange() }
     }
+    @AppStorage(SettingsKey.mode) var mode: PowerManagementMode = .threshold {
+        didSet { handleModeChange() }
+    }
+    @AppStorage(SettingsKey.idleGateEnabled) var idleGateEnabled: Bool = false
+    @AppStorage(SettingsKey.idleMinutes) var idleMinutes: Int = Constants.defaultIdleMinutes
+    @AppStorage(SettingsKey.plugOnAtStart) var plugOnAtStart: Bool = false
 
     @Published var shutdownLog: [ShutdownLogEntry] = []
 
     let plugStore: PlugStore
 
     private let batteryReader = BatteryReader()
+    private let powerStateManager = PowerStateManager()
     private var timer: Timer?
     private var warmTimer: Timer?
-    private var lastAction: PlugAction?
     private var suppressLoginItemSync = false
     private var currentController: (any PlugProviding)?
     private var cancellables = Set<AnyCancellable>()
@@ -89,6 +99,18 @@ final class AppState: ObservableObject {
 
     var providerConfigured: Bool {
         currentController?.isConfigured ?? false
+    }
+
+    /// Whether the plug should be turned OFF when the system shuts down or sleeps.
+    /// Always true for Event mode; controlled by `switchOffOnShutdown` in Threshold and Hybrid modes.
+    var shouldSendOffOnShutdown: Bool {
+        mode == .event ? true : switchOffOnShutdown
+    }
+
+    /// Whether the plug should be turned ON when the app starts.
+    /// Always true for Event mode; controlled by `plugOnAtStart` in Threshold and Hybrid modes.
+    var shouldPlugOnAtStart: Bool {
+        mode == .event ? true : plugOnAtStart
     }
 
     var activePlugName: String? {
@@ -127,7 +149,9 @@ final class AppState: ObservableObject {
             Task { try? await warmProviderToken() }
         }
         Task { await syncLoginItem() }
+        Task { await performLaunchActions() }
         performCheck(reason: .startup)
+        Task { await checkForUpdates() }
     }
 
     deinit {
@@ -147,6 +171,17 @@ final class AppState: ObservableObject {
 
     func performCheck(reason: CheckReason = .automatic) {
         guard !isChecking else { return }
+
+        guard mode.usesBatteryMonitoring else {
+            Task {
+                if let percent = try? await readBatteryPercent() {
+                    batteryPercent = percent
+                    lastCheckDate = Date()
+                }
+                statusMessage = appEnabled ? "Event mode – awaiting system events" : "App disabled"
+            }
+            return
+        }
 
         isChecking = true
         statusMessage = appEnabled ? "Checking battery…" : "App disabled"
@@ -200,7 +235,8 @@ final class AppState: ObservableObject {
     ///
     /// - Parameter reason: Human-readable trigger context ("shutdown", "quit", "sleep").
     func sendShutdownCommand(reason: String) async {
-        guard switchOffOnShutdown else { return }
+        guard appEnabled else { return }
+        guard shouldSendOffOnShutdown else { return }
         guard let controller = currentController, controller.isConfigured else { return }
 
         appendShutdownLog(ShutdownLogEntry(date: Date(), reason: reason, outcome: .attempted))
@@ -231,6 +267,44 @@ final class AppState: ObservableObject {
     func logShutdownTimeout(reason: String) {
         appendShutdownLog(ShutdownLogEntry(date: Date(), reason: reason, outcome: .timeout))
     }
+
+    func checkForUpdates() async {
+        guard !isCheckingForUpdates else { return }
+        isCheckingForUpdates = true
+        defer { isCheckingForUpdates = false }
+
+        do {
+            let checker = UpdateChecker()
+            if let result = try await checker.check() {
+                latestReleasedVersion = result.latestVersion
+                if result.isNewer {
+                    updateAvailable = result.latestVersion
+                    updateURL = result.releaseURL
+                } else {
+                    updateAvailable = nil
+                    updateURL = nil
+                }
+            }
+        } catch {
+            // Silently ignore network errors on auto-check
+        }
+    }
+
+    /// Turns the plug ON at launch/mode-switch/wake when `shouldPlugOnAtStart` is true.
+    func performLaunchActions() async {
+        guard shouldPlugOnAtStart, appEnabled else { return }
+        guard let controller = currentController, controller.isConfigured else { return }
+        do {
+            let sent = try await powerStateManager.send(value: true, via: controller)
+            if sent {
+                isPlugOn = true
+                lastActionMessage = "Plug ON (launch)"
+                statusMessage = lastActionMessage
+            }
+        } catch {
+            statusMessage = "Launch ON failed: \(error.localizedDescription)"
+        }
+    }
 }
 
 // MARK: - Private helpers
@@ -244,53 +318,45 @@ private extension AppState {
     }
 
     func evaluateBattery(percent: Int, reason _: CheckReason) async throws {
-        guard validateThresholds() else {
-            statusMessage = "Fix thresholds (On < Off)."
-            return
-        }
-
-        let action: PlugAction?
-        if percent >= offThreshold {
-            action = .off
-        } else if percent <= onThreshold {
-            action = .on
-        } else {
-            action = nil
-        }
-
-        guard let desiredAction = action else {
-            statusMessage = "No action (\(percent)%)"
-            return
-        }
-
-        if shouldSkip(action: desiredAction) {
-            statusMessage = "Skipping (recent \(desiredAction.displayText))"
-            return
-        }
-
         guard let controller = currentController, controller.isConfigured else {
             statusMessage = "Configure plug in Settings"
             return
         }
 
-        do {
-            try await controller.sendCommand(value: desiredAction.value)
-            lastAction = desiredAction
-            isPlugOn = desiredAction == .on
-            lastActionMessage = "Plug \(desiredAction.displayText) at \(percent)%"
-            statusMessage = lastActionMessage
-            postPlugNotification(action: desiredAction, percent: percent)
-        } catch {
-            statusMessage = "\(error.localizedDescription)"
+        guard validateThresholds() else {
+            statusMessage = "Fix thresholds (On < Off)."
+            return
         }
-    }
 
-    func shouldSkip(action: PlugAction) -> Bool {
-        lastAction == action
+        let desiredValue = ThresholdStrategy(
+            onThreshold: onThreshold,
+            offThreshold: offThreshold,
+            idleMinutes: idleGateEnabled ? idleMinutes : nil
+        ).evaluate(batteryPercent: percent)
+
+        guard let value = desiredValue else {
+            statusMessage = "No action (\(percent)%)"
+            return
+        }
+
+        let sent = try await powerStateManager.send(value: value, via: controller)
+        if sent {
+            isPlugOn = value
+            let action: PlugAction = value ? .on : .off
+            lastActionMessage = "Plug \(action.displayText) at \(percent)%"
+            statusMessage = lastActionMessage
+            postPlugNotification(action: action, percent: percent)
+        } else {
+            statusMessage = "Skipping (recent \(value ? "ON" : "OFF"))"
+        }
     }
 
     func restartTimer() {
         timer?.invalidate()
+        guard mode.usesBatteryMonitoring else {
+            timer = nil
+            return
+        }
         let interval = TimeInterval(intervalSec)
         timer = Timer.scheduledTimer(timeInterval: interval,
                                      target: self,
@@ -371,6 +437,13 @@ private extension AppState {
     }
 
     func handleAppEnabledChange() {
+        performCheck(reason: .manual)
+    }
+
+    func handleModeChange() {
+        powerStateManager.reset()
+        restartTimer()
+        Task { await performLaunchActions() }
         performCheck(reason: .manual)
     }
 
