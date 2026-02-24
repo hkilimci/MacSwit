@@ -289,6 +289,22 @@ final class AppState: ObservableObject {
             // Silently ignore network errors on auto-check
         }
     }
+
+    /// Turns the plug ON at launch/mode-switch/wake when `shouldPlugOnAtStart` is true.
+    func performLaunchActions() async {
+        guard shouldPlugOnAtStart, appEnabled else { return }
+        guard let controller = currentController, controller.isConfigured else { return }
+        do {
+            let sent = try await powerStateManager.send(value: true, via: controller)
+            if sent {
+                isPlugOn = true
+                lastActionMessage = "Plug ON (launch)"
+                statusMessage = lastActionMessage
+            }
+        } catch {
+            statusMessage = "Launch ON failed: \(error.localizedDescription)"
+        }
+    }
 }
 
 // MARK: - Private helpers
@@ -429,22 +445,6 @@ private extension AppState {
         restartTimer()
         Task { await performLaunchActions() }
         performCheck(reason: .manual)
-    }
-
-    /// Turns the plug ON at launch/mode-switch when `shouldPlugOnAtStart` is true.
-    func performLaunchActions() async {
-        guard shouldPlugOnAtStart, appEnabled else { return }
-        guard let controller = currentController, controller.isConfigured else { return }
-        do {
-            let sent = try await powerStateManager.send(value: true, via: controller)
-            if sent {
-                isPlugOn = true
-                lastActionMessage = "Plug ON (launch)"
-                statusMessage = lastActionMessage
-            }
-        } catch {
-            statusMessage = "Launch ON failed: \(error.localizedDescription)"
-        }
     }
 
     func handleSwitchOffOnShutdownChange() {
