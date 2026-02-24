@@ -371,13 +371,61 @@ struct SettingsView: View {
                                 .foregroundColor(.secondary)
                         }
                         Spacer()
-                        Text("v1.0")
+                        Text("v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?")")
                             .font(.system(size: 12, design: .monospaced))
                             .foregroundColor(.secondary)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
                             .background(Color.primary.opacity(0.05))
                             .clipShape(RoundedRectangle(cornerRadius: 4))
+                    }
+
+                    Divider()
+
+                    // Update banner
+                    if let version = appState.updateAvailable, let url = appState.updateURL {
+                        HStack(spacing: 8) {
+                            Image(systemName: "arrow.down.circle.fill")
+                                .font(.system(size: 13))
+                                .foregroundColor(.blue)
+                            Text("v\(version) available")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.blue)
+                            Spacer()
+                            Link("Download", destination: url)
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(.blue)
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 6)
+                        .background(Color.blue.opacity(0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+
+                        Divider()
+                    }
+
+                    // Check for Updates button
+                    HStack(spacing: 8) {
+                        TestButton(
+                            title: "Check for Updates",
+                            icon: "arrow.triangle.2.circlepath",
+                            color: .blue,
+                            isLoading: appState.isCheckingForUpdates
+                        ) {
+                            Task { await appState.checkForUpdates() }
+                        }
+                        Spacer()
+                        if !appState.isCheckingForUpdates, let latest = appState.latestReleasedVersion {
+                            if appState.updateAvailable != nil {
+                                Label("v\(latest) available", systemImage: "arrow.down.circle.fill")
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundColor(.blue)
+                            } else {
+                                Label("Up to date · v\(latest)", systemImage: "checkmark.circle.fill")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.green)
+                            }
+                        }
                     }
 
                     Divider()

@@ -47,6 +47,10 @@ final class AppState: ObservableObject {
     @Published var isChecking: Bool = false
     @Published var lastCheckDate: Date?
     @Published var isPlugOn: Bool = false
+    @Published var updateAvailable: String? = nil
+    @Published var updateURL: URL? = nil
+    @Published var latestReleasedVersion: String? = nil
+    @Published var isCheckingForUpdates: Bool = false
 
     @AppStorage(SettingsKey.onThreshold) var onThreshold: Int = Constants.defaultOnThreshold {
         didSet { _ = validateThresholds() }
@@ -147,6 +151,7 @@ final class AppState: ObservableObject {
         Task { await syncLoginItem() }
         Task { await performLaunchActions() }
         performCheck(reason: .startup)
+        Task { await checkForUpdates() }
     }
 
     deinit {
@@ -260,6 +265,28 @@ final class AppState: ObservableObject {
     /// Appends a `.timeout` log entry. `internal` so `AppDelegate` can call it.
     func logShutdownTimeout(reason: String) {
         appendShutdownLog(ShutdownLogEntry(date: Date(), reason: reason, outcome: .timeout))
+    }
+
+    func checkForUpdates() async {
+        guard !isCheckingForUpdates else { return }
+        isCheckingForUpdates = true
+        defer { isCheckingForUpdates = false }
+
+        do {
+            let checker = UpdateChecker()
+            if let result = try await checker.check() {
+                latestReleasedVersion = result.latestVersion
+                if result.isNewer {
+                    updateAvailable = result.latestVersion
+                    updateURL = result.releaseURL
+                } else {
+                    updateAvailable = nil
+                    updateURL = nil
+                }
+            }
+        } catch {
+            // Silently ignore network errors on auto-check
+        }
     }
 }
 

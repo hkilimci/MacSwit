@@ -164,6 +164,14 @@ struct MenuView: View {
                         }
                     }
                 }
+                .overlay(alignment: .topTrailing) {
+                    if appState.updateAvailable != nil {
+                        Circle()
+                            .fill(Color.blue)
+                            .frame(width: 7, height: 7)
+                            .offset(x: -8, y: 8)
+                    }
+                }
 
                 MenuButton(title: "Quit", icon: "power") {
                     NSApp.terminate(nil)

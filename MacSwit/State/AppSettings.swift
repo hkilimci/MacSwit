@@ -13,6 +13,7 @@ enum SettingsKey {
     static let idleGateEnabled = "MacSwit.idleGateEnabled"
     static let idleMinutes = "MacSwit.idleMinutes"
     static let plugOnAtStart = "MacSwit.plugOnAtStart"
+    static let lastUpdateCheck = "MacSwit.lastUpdateCheck"
 }
 
 /// Application-wide default values.
