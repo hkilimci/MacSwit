@@ -113,10 +113,10 @@ struct SettingsView: View {
                 .labelsHidden()
 
                 modeSettingsContent
-                    .padding(24)
 
                 Spacer(minLength: 16)
             }
+            .padding(24)
         }
         .onAppear { settingsTab = mode }
     }
