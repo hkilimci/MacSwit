@@ -144,7 +144,7 @@ final class AppState: ObservableObject {
         requestNotificationPermission()
         loadShutdownLog()
         restartTimer()
-        if switchOffOnShutdown {
+        if shouldSendOffOnShutdown {
             startWarmTimer()
             Task { try? await warmProviderToken() }
         }
@@ -443,12 +443,13 @@ private extension AppState {
     func handleModeChange() {
         powerStateManager.reset()
         restartTimer()
+        handleSwitchOffOnShutdownChange()
         Task { await performLaunchActions() }
         performCheck(reason: .manual)
     }
 
     func handleSwitchOffOnShutdownChange() {
-        if switchOffOnShutdown {
+        if shouldSendOffOnShutdown {
             startWarmTimer()
             Task { try? await warmProviderToken() }
         } else {
