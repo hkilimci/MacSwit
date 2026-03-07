@@ -3,6 +3,7 @@ import SwiftUI
 import ServiceManagement
 import Combine
 import UserNotifications
+import Network
 
 // MARK: - Shutdown log
 
@@ -149,7 +150,7 @@ final class AppState: ObservableObject {
             Task { try? await warmProviderToken() }
         }
         Task { await syncLoginItem() }
-        Task { await performLaunchActions() }
+        Task { await performLaunchActions(waitForInternetOnStartup: true) }
         performCheck(reason: .startup)
         Task { await checkForUpdates() }
     }
@@ -291,9 +292,16 @@ final class AppState: ObservableObject {
     }
 
     /// Turns the plug ON at launch/mode-switch/wake when `shouldPlugOnAtStart` is true.
-    func performLaunchActions() async {
+    /// Optionally waits for internet when called at app startup.
+    func performLaunchActions(waitForInternetOnStartup: Bool = false) async {
         guard shouldPlugOnAtStart, appEnabled else { return }
         guard let controller = currentController, controller.isConfigured else { return }
+
+        if waitForInternetOnStartup {
+            statusMessage = "Waiting for internet connection..."
+            await waitForInternetConnection()
+        }
+
         do {
             let sent = try await powerStateManager.send(value: true, via: controller)
             if sent {
@@ -478,6 +486,20 @@ private extension AppState {
     func warmProviderToken() async throws {
         guard let controller = currentController, controller.isConfigured else { return }
         try await controller.warmToken()
+    }
+
+    // MARK: - Connectivity
+
+    /// Blocks until macOS reports an active network path.
+    func waitForInternetConnection() async {
+        let monitor = NWPathMonitor()
+        let queue = DispatchQueue(label: "MacSwit.NetworkWait")
+        monitor.start(queue: queue)
+        defer { monitor.cancel() }
+
+        while monitor.currentPath.status != .satisfied {
+            try? await Task.sleep(nanoseconds: 500_000_000)
+        }
     }
 
     // MARK: - Shutdown logging
