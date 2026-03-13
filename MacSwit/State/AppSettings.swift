@@ -12,6 +12,7 @@ enum SettingsKey {
     static let mode = "MacSwit.mode"
     static let idleGateEnabled = "MacSwit.idleGateEnabled"
     static let idleMinutes = "MacSwit.idleMinutes"
+    static let switchOffOnSleep = "MacSwit.switchOffOnSleep"
     static let plugOnAtStart = "MacSwit.plugOnAtStart"
     static let lastUpdateCheck = "MacSwit.lastUpdateCheck"
 }

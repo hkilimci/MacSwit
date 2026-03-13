@@ -79,6 +79,9 @@ final class AppState: ObservableObject {
     }
     @AppStorage(SettingsKey.idleGateEnabled) var idleGateEnabled: Bool = false
     @AppStorage(SettingsKey.idleMinutes) var idleMinutes: Int = Constants.defaultIdleMinutes
+    @AppStorage(SettingsKey.switchOffOnSleep) var switchOffOnSleep: Bool = false {
+        didSet { handleSleepShutdownWarmingChange() }
+    }
     @AppStorage(SettingsKey.plugOnAtStart) var plugOnAtStart: Bool = false
 
     @Published var shutdownLog: [ShutdownLogEntry] = []
@@ -102,17 +105,14 @@ final class AppState: ObservableObject {
         currentController?.isConfigured ?? false
     }
 
-    /// Whether the plug should be turned OFF when the system shuts down or sleeps.
-    /// Always true for Event mode; controlled by `switchOffOnShutdown` in Threshold and Hybrid modes.
-    var shouldSendOffOnShutdown: Bool {
-        mode == .event ? true : switchOffOnShutdown
-    }
+    /// Whether the plug should be turned OFF when the system shuts down.
+    var shouldSendOffOnShutdown: Bool { switchOffOnShutdown }
+
+    /// Whether the plug should be turned OFF when the system sleeps.
+    var shouldSendOffOnSleep: Bool { switchOffOnSleep }
 
     /// Whether the plug should be turned ON when the app starts.
-    /// Always true for Event mode; controlled by `plugOnAtStart` in Threshold and Hybrid modes.
-    var shouldPlugOnAtStart: Bool {
-        mode == .event ? true : plugOnAtStart
-    }
+    var shouldPlugOnAtStart: Bool { plugOnAtStart }
 
     var activePlugName: String? {
         plugStore.activePlug?.name
@@ -145,7 +145,7 @@ final class AppState: ObservableObject {
         requestNotificationPermission()
         loadShutdownLog()
         restartTimer()
-        if shouldSendOffOnShutdown {
+        if shouldSendOffOnShutdown || shouldSendOffOnSleep {
             startWarmTimer()
             Task { try? await warmProviderToken() }
         }
@@ -457,7 +457,11 @@ private extension AppState {
     }
 
     func handleSwitchOffOnShutdownChange() {
-        if shouldSendOffOnShutdown {
+        handleSleepShutdownWarmingChange()
+    }
+
+    func handleSleepShutdownWarmingChange() {
+        if shouldSendOffOnShutdown || shouldSendOffOnSleep {
             startWarmTimer()
             Task { try? await warmProviderToken() }
         } else {

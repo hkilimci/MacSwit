@@ -18,6 +18,7 @@ struct SettingsView: View {
     @AppStorage(SettingsKey.mode) private var mode: PowerManagementMode = .threshold
     @AppStorage(SettingsKey.idleGateEnabled) private var idleGateEnabled = false
     @AppStorage(SettingsKey.idleMinutes) private var idleMinutes = Constants.defaultIdleMinutes
+    @AppStorage(SettingsKey.switchOffOnSleep) private var switchOffOnSleep = false
     @AppStorage(SettingsKey.plugOnAtStart) private var plugOnAtStart = false
     @State private var selectedTab = 0
     @State private var settingsTab: PowerManagementMode = .threshold
@@ -79,10 +80,9 @@ struct SettingsView: View {
                             title: "Turn plug ON at startup",
                             description: "Send switch ON command when MacSwit launches"
                         ) {
-                            Toggle("", isOn: mode == .event ? .constant(true) : $plugOnAtStart)
+                            Toggle("", isOn: $plugOnAtStart)
                                 .labelsHidden()
                                 .toggleStyle(.switch)
-                                .disabled(mode == .event)
                         }
 
                         Divider()
@@ -93,12 +93,22 @@ struct SettingsView: View {
                             title: "Turn plug OFF on shutdown",
                             description: "Send switch OFF command when Mac shuts down"
                         ) {
-                            Toggle(
-                                "", isOn: mode == .event ? .constant(true) : $switchOffOnShutdown
-                            )
-                            .labelsHidden()
-                            .toggleStyle(.switch)
-                            .disabled(mode == .event)
+                            Toggle("", isOn: $switchOffOnShutdown)
+                                .labelsHidden()
+                                .toggleStyle(.switch)
+                        }
+
+                        Divider()
+
+                        SettingsRow(
+                            icon: "powersleep",
+                            iconColor: .purple,
+                            title: "Turn plug OFF on sleep",
+                            description: "Send switch OFF command when Mac goes to sleep"
+                        ) {
+                            Toggle("", isOn: $switchOffOnSleep)
+                                .labelsHidden()
+                                .toggleStyle(.switch)
                         }
                     }
                 }

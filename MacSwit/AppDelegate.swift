@@ -116,7 +116,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     /// pre-warmed token makes completion before sleep likely.
     private func sendShutdownCommandForSleep() {
         guard let appState = appState,
-              appState.shouldSendOffOnShutdown,
+              appState.shouldSendOffOnSleep,
               appState.providerConfigured else { return }
 
         Task { @MainActor in
@@ -127,10 +127,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Wake path (didWakeNotification)
 
     /// Turns the plug back ON after the system wakes from sleep.
+    /// Only fires when `shouldSendOffOnSleep` is true (i.e. plug was turned off on sleep).
     /// Reuses `performLaunchActions` so the same `shouldPlugOnAtStart` /
     /// `appEnabled` / provider-configured guards apply.
     private func sendWakeCommand() {
         guard let appState = appState,
+              appState.shouldSendOffOnSleep,
               appState.appEnabled,
               appState.providerConfigured else { return }
 
