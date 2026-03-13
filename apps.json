@@ -1,0 +1,29 @@
+{
+  "id": "mac-swit",
+  "name": "Mac Swit",
+  "developer": "Hasan Harun Kilimci",
+  "subtitle": "Smart Battery Management",
+  "description": "A menubar app that automatically controls your smart plug to extend your battery's lifespan",
+  "longDescription": "MacSwit automatically controls your smart plug by providing you to choose from threshold-based automation, event-driven control, or a hybrid of both.",
+  "icon": "https://raw.githubusercontent.com/hkilimci/MacSwit/refs/heads/main/MacSwit/Assets.xcassets/AppIcon.appiconset/Icon-mac-512x512%402x.png",
+  "iconStyle": { "scale": 1.3, "objectFit": "cover", "borderRadius": "22%" },
+  "category": ["macos", "utilities"],
+  "platform": "macOS",
+  "price": "Free",
+  "github": "https://github.com/hkilimci/MacSwit",
+  "homepage": "https://app.azrapps.com/MacSwit/",
+  "language": "Swift",
+  "downloadUrl": "https://github.com/hkilimci/MacSwit/releases/latest",
+  "features": [
+    "Menubar app for seamless access",
+    "Threshold-based automation to manage battery health",
+    "Event-driven control for real-time responsiveness",
+    "Hybrid control combining both automation and event-driven features",
+    "Customizable settings for personalized battery management"
+  ],
+  "screenshots": [
+    "https://raw.githubusercontent.com/hkilimci/MacSwit/refs/heads/main/Screenshots/settings-battery.png",
+    "https://raw.githubusercontent.com/hkilimci/MacSwit/refs/heads/main/Screenshots/settings-smart-plug.png",
+    "https://raw.githubusercontent.com/hkilimci/MacSwit/refs/heads/main/Screenshots/settings-general.png"
+  ]
+}
